@@ -1,0 +1,18 @@
+Socket wrapper library
+=======================
+
+This library passes all socket communication over unix domain sockets if the
+environment variable SOCKET_WRAPPER_DIR is set.
+
+It need to be preloaded with LD_PRELOAD.
+
+Environment variables which could be set:
+
+SOCKET_WRAPPER_DIR
+    The directory to place all unix sockets.
+
+SOCKET_WRAPPER_DEFAULT_IFACE
+
+SOCKET_WRAPPER_PCAP_FILE
+    If set then all traffic will be written to the
+    specified pcap file.
