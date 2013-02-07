@@ -300,7 +300,7 @@ struct socket_info
 
 static struct socket_info *sockets;
 
-const char *socket_wrapper_dir(void)
+static const char *socket_wrapper_dir(void)
 {
 	const char *s = getenv("SOCKET_WRAPPER_DIR");
 	if (s == NULL) {
@@ -312,7 +312,7 @@ const char *socket_wrapper_dir(void)
 	return s;
 }
 
-unsigned int socket_wrapper_default_iface(void)
+static unsigned int socket_wrapper_default_iface(void)
 {
 	const char *s = getenv("SOCKET_WRAPPER_DEFAULT_IFACE");
 	if (s) {
