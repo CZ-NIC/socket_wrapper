@@ -66,6 +66,10 @@
 #define _PUBLIC_
 #endif
 
+#ifndef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#endif
+
 #define SWRAP_DLIST_ADD(list,item) do { \
 	if (!(list)) { \
 		(item)->prev	= NULL; \
