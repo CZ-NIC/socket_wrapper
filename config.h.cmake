@@ -28,27 +28,7 @@
 
 /**************************** OPTIONS ****************************/
 
-/* Define to 1 if you want to enable ZLIB */
-#cmakedefine WITH_ZLIB 1
-
-/* Define to 1 if you want to enable SFTP */
-#cmakedefine WITH_SFTP 1
-
-/* Define to 1 if you want to enable SSH1 */
-#cmakedefine WITH_SSH1 1
-
-/* Define to 1 if you want to enable server support */
-#cmakedefine WITH_SERVER 1
-
-/* Define to 1 if you want to enable debug output for crypto functions */
-#cmakedefine DEBUG_CRYPTO 1
-
-/* Define to 1 if you want to enable pcap output support (experimental) */
-#cmakedefine WITH_PCAP 1
-
-/* Define to 1 if you want to enable calltrace debug output */
-#cmakedefine DEBUG_CALLTRACE 1
-
+#cmakedefine HAVE_SOCKADDR_STORAGE 1
 #cmakedefine HAVE_IPV6 1
 
 /*************************** ENDIAN *****************************/
