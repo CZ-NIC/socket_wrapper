@@ -124,6 +124,10 @@
  * without changing the format above */
 #define MAX_WRAPPED_INTERFACES 40
 
+/*********************************************************
+ * SWRAP LOADING LIBC FUNCTIONS
+ *********************************************************/
+
 #include <dlfcn.h>
 
 #define LIBC_NAME "libc.so.6"
@@ -205,6 +209,21 @@ static int real_getsockname(int sockfd,
 
 	return libc_getsockname(sockfd, addr, addrlen);
 }
+
+static int (*libc_socket)(int domain, int type, int protocol);
+
+static int real_socket(int domain, int type, int protocol)
+{
+	if (libc_socket == NULL) {
+		*(void **)(&libc_socket) = libc_dlsym("socket");
+	}
+
+	return libc_socket(domain, type, protocol);
+}
+
+/*********************************************************
+ * SWRAP HELPER FUNCTIONS
+ *********************************************************/
 
 #ifdef HAVE_IPV6
 /*
@@ -1461,8 +1480,7 @@ static void swrap_dump_packet(struct socket_info *si,
 	free(packet);
 }
 
-#if 0
-_PUBLIC_ int swrap_socket(int family, int type, int protocol)
+int socket(int family, int type, int protocol)
 {
 	struct socket_info *si;
 	struct socket_info_fd *fi;
@@ -1553,7 +1571,6 @@ _PUBLIC_ int swrap_socket(int family, int type, int protocol)
 
 	return fd;
 }
-#endif
 
 int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 {
