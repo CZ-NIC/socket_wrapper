@@ -132,44 +132,78 @@ static void *libc_hnd;
 
 static int libc_dlopen(void)
 {
-    if (libc_hnd != NULL) {
-        return 0;
-    }
-    libc_hnd = dlopen(LIBC_NAME, RTLD_LAZY);
-    if (libc_hnd == NULL) {
-        printf("Failed to dlopen %s: %s\n", LIBC_NAME, dlerror());
-        exit(-1);
-    }
+	if (libc_hnd != NULL) {
+		return 0;
+	}
+	libc_hnd = dlopen(LIBC_NAME, RTLD_LAZY);
+	if (libc_hnd == NULL) {
+		printf("Failed to dlopen %s: %s\n", LIBC_NAME, dlerror());
+		exit(-1);
+	}
 
-    return 0;
+	return 0;
 }
 
 static void *libc_dlsym(const char *name)
 {
-    void *func;
+	void *func;
 
-    libc_dlopen();
+	libc_dlopen();
 
-    func = dlsym(libc_hnd, name);
+	func = dlsym(libc_hnd, name);
 
-    if (func == NULL) {
-        printf("Failed to find %s in %s: %s\n",
-               name, LIBC_NAME, dlerror());
-        exit(-1);
-    }
+	if (func == NULL) {
+		printf("Failed to find %s in %s: %s\n",
+				name, LIBC_NAME, dlerror());
+		exit(-1);
+	}
 
-    return func;
+	return func;
 }
 
-static int (*libc_accept)(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+static int (*libc_accept)(int sockfd,
+			  struct sockaddr *addr,
+			  socklen_t *addrlen);
 
-static int real_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+static int real_accept(int sockfd,
+		       struct sockaddr *addr,
+		       socklen_t *addrlen)
 {
-    if (libc_accept == NULL) {
-        *(void **)(&libc_accept) = libc_dlsym("accept");
-    }
+	if (libc_accept == NULL) {
+		*(void **)(&libc_accept) = libc_dlsym("accept");
+	}
 
-    return libc_accept(sockfd, addr, addrlen);
+	return libc_accept(sockfd, addr, addrlen);
+}
+
+static int (*libc_bind)(int sockfd,
+			const struct sockaddr *addr,
+			socklen_t addrlen);
+
+static int real_bind(int sockfd,
+		     const struct sockaddr *addr,
+		     socklen_t addrlen)
+{
+	if (libc_bind == NULL) {
+		*(void **)(&libc_bind) = libc_dlsym("bind");
+	}
+
+	return libc_bind(sockfd, addr, addrlen);
+}
+
+static int (*libc_getsockname)(int sockfd,
+			       struct sockaddr *addr,
+			       socklen_t *addrlen);
+
+static int real_getsockname(int sockfd,
+			    struct sockaddr *addr,
+			    socklen_t *addrlen)
+{
+	if (libc_getsockname == NULL) {
+		*(void **)(&libc_getsockname) = libc_dlsym("getsockname");
+	}
+
+	return libc_getsockname(sockfd, addr, addrlen);
 }
 
 #ifdef HAVE_IPV6
@@ -1427,6 +1461,7 @@ static void swrap_dump_packet(struct socket_info *si,
 	free(packet);
 }
 
+#if 0
 _PUBLIC_ int swrap_socket(int family, int type, int protocol)
 {
 	struct socket_info *si;
@@ -1518,8 +1553,9 @@ _PUBLIC_ int swrap_socket(int family, int type, int protocol)
 
 	return fd;
 }
+#endif
 
-_PUBLIC_ int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
+int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 {
 	struct socket_info *parent_si, *child_si;
 	struct socket_info_fd *child_fi;
@@ -1757,6 +1793,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 	return 0;
 }
 
+#if 0
 
 _PUBLIC_ int swrap_connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
@@ -2668,3 +2705,4 @@ _PUBLIC_ int swrap_dup2(int fd, int newfd)
 	SWRAP_DLIST_ADD(si->fds, fi);
 	return fi->fd;
 }
+#endif /* 0 */
