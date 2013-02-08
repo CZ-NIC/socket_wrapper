@@ -712,12 +712,20 @@ static struct socket_info *find_socket_info(int fd)
 	return NULL;
 }
 
-static int sockaddr_convert_to_un(struct socket_info *si, const struct sockaddr *in_addr, socklen_t in_len, 
-				  struct sockaddr_un *out_addr, int alloc_sock, int *bcast)
+static int sockaddr_convert_to_un(struct socket_info *si,
+				  const struct sockaddr *in_addr,
+				  socklen_t in_len,
+				  struct sockaddr_un *out_addr,
+				  int alloc_sock,
+				  int *bcast)
 {
 	struct sockaddr *out = (struct sockaddr *)(void *)out_addr;
-	if (!out_addr)
+
+	(void) in_len; /* unused */
+
+	if (out_addr == NULL) {
 		return 0;
+	}
 
 	out->sa_family = AF_UNIX;
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
