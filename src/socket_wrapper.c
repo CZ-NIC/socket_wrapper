@@ -225,6 +225,18 @@ static int real_getsockname(int sockfd,
 	return libc_getsockname(sockfd, addr, addrlen);
 }
 
+static int (*libc_listen)(int sockfd, int backlog);
+
+static int real_listen(int sockfd, int backlog)
+{
+	if (libc_listen == NULL) {
+		*(void **)(&libc_listen) = libc_dlsym("listen");
+	}
+
+	return libc_listen(sockfd, backlog);
+}
+
+
 static int (*libc_socket)(int domain, int type, int protocol);
 
 static int real_socket(int domain, int type, int protocol)
@@ -1913,8 +1925,7 @@ int bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 	return ret;
 }
 
-#if 0
-_PUBLIC_ int swrap_listen(int s, int backlog)
+int listen(int s, int backlog)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -1928,6 +1939,7 @@ _PUBLIC_ int swrap_listen(int s, int backlog)
 	return ret;
 }
 
+#if 0
 _PUBLIC_ int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 {
 	struct socket_info *si = find_socket_info(s);
