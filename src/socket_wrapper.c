@@ -195,6 +195,21 @@ static int real_bind(int sockfd,
 	return libc_bind(sockfd, addr, addrlen);
 }
 
+static int (*libc_connect)(int sockfd,
+			   const struct sockaddr *addr,
+			   socklen_t addrlen);
+
+static int real_connect(int sockfd,
+			const struct sockaddr *addr,
+			socklen_t addrlen)
+{
+	if (libc_connect == NULL) {
+		*(void **)(&libc_connect) = libc_dlsym("connect");
+	}
+
+	return libc_connect(sockfd, addr, addrlen);
+}
+
 static int (*libc_getsockname)(int sockfd,
 			       struct sockaddr *addr,
 			       socklen_t *addrlen);
@@ -1810,9 +1825,8 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 	return 0;
 }
 
-#if 0
 
-_PUBLIC_ int swrap_connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
+int connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
 	int ret;
 	struct sockaddr_un un_addr;
@@ -1871,6 +1885,7 @@ _PUBLIC_ int swrap_connect(int s, const struct sockaddr *serv_addr, socklen_t ad
 	return ret;
 }
 
+#if 0
 _PUBLIC_ int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 {
 	int ret;
