@@ -1974,8 +1974,7 @@ int getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
-#if 0
-_PUBLIC_ int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
+int getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -1989,6 +1988,7 @@ _PUBLIC_ int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
+#if 0
 _PUBLIC_ int swrap_getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
 {
 	struct socket_info *si = find_socket_info(s);
