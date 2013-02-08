@@ -1513,7 +1513,7 @@ static void swrap_dump_packet(struct socket_info *si,
 
 	fd = swrap_get_pcap_fd(file_name);
 	if (fd != -1) {
-		if (write(fd, packet, packet_len) != packet_len) {
+		if (write(fd, packet, packet_len) != (ssize_t)packet_len) {
 			free(packet);
 			return;
 		}
