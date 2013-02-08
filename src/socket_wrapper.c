@@ -1885,8 +1885,7 @@ int connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
 	return ret;
 }
 
-#if 0
-_PUBLIC_ int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
+int bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 {
 	int ret;
 	struct sockaddr_un un_addr;
@@ -1914,6 +1913,7 @@ _PUBLIC_ int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 	return ret;
 }
 
+#if 0
 _PUBLIC_ int swrap_listen(int s, int backlog)
 {
 	int ret;
