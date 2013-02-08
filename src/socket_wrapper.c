@@ -210,6 +210,21 @@ static int real_connect(int sockfd,
 	return libc_connect(sockfd, addr, addrlen);
 }
 
+static int (*libc_getpeername)(int sockfd,
+			       struct sockaddr *addr,
+			       socklen_t *addrlen);
+
+static int real_getpeername(int sockfd,
+			    struct sockaddr *addr,
+			    socklen_t *addrlen)
+{
+	if (libc_getpeername == NULL) {
+		*(void **)(&libc_getpeername) = libc_dlsym("getpeername");
+	}
+
+	return libc_getpeername(sockfd, addr, addrlen);
+}
+
 static int (*libc_getsockname)(int sockfd,
 			       struct sockaddr *addr,
 			       socklen_t *addrlen);
@@ -1939,8 +1954,7 @@ int listen(int s, int backlog)
 	return ret;
 }
 
-#if 0
-_PUBLIC_ int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
+int getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -1960,6 +1974,7 @@ _PUBLIC_ int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
+#if 0
 _PUBLIC_ int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 {
 	struct socket_info *si = find_socket_info(s);
