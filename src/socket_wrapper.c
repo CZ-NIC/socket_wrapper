@@ -270,6 +270,24 @@ static int real_listen(int sockfd, int backlog)
 	return libc_listen(sockfd, backlog);
 }
 
+static int (*libc_setsockopt)(int sockfd,
+			      int level,
+			      int optname,
+			      const void *optval,
+			      socklen_t optlen);
+
+static int real_setsockopt(int sockfd,
+			   int level,
+			   int optname,
+			   const void *optval,
+			   socklen_t optlen)
+{
+	if (libc_setsockopt == NULL) {
+		*(void **)(&libc_setsockopt) = libc_dlsym("setsockopt");
+	}
+
+	return libc_setsockopt(sockfd, level, optname, optval, optlen);
+}
 
 static int (*libc_socket)(int domain, int type, int protocol);
 
@@ -2031,8 +2049,8 @@ int getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
 	return -1;
 }
 
-#if 0
-_PUBLIC_ int swrap_setsockopt(int s, int  level,  int  optname,  const  void  *optval, socklen_t optlen)
+int setsockopt(int s, int level, int optname,
+	       const void *optval, socklen_t optlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -2057,6 +2075,7 @@ _PUBLIC_ int swrap_setsockopt(int s, int  level,  int  optname,  const  void  *o
 	}
 }
 
+#if 0
 _PUBLIC_ int swrap_ioctl(int s, int r, void *p)
 {
 	int ret;
