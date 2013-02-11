@@ -300,6 +300,17 @@ static int real_listen(int sockfd, int backlog)
 	return libc_listen(sockfd, backlog);
 }
 
+static int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
+
+static int real_recv(int sockfd, void *buf, size_t len, int flags)
+{
+	if (libc_recv == NULL) {
+		*(void **)(&libc_recv) = libc_dlsym("recv");
+	}
+
+	return libc_recv(sockfd, buf, len, flags);
+}
+
 static int (*libc_recvfrom)(int sockfd, void *buf, size_t len, int flags,
 			    struct sockaddr *src_addr, socklen_t *addrlen);
 
@@ -2467,8 +2478,7 @@ ssize_t sendto(int s, const void *buf, size_t len, int flags,
 	return ret;
 }
 
-#if 0
-_PUBLIC_ ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
+ssize_t recv(int s, void *buf, size_t len, int flags)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -2496,6 +2506,7 @@ _PUBLIC_ ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 	return ret;
 }
 
+#if 0
 _PUBLIC_ ssize_t swrap_read(int s, void *buf, size_t len)
 {
 	int ret;
