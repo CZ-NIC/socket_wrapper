@@ -71,6 +71,18 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
+#ifndef ZERO_STRUCT
+#define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
+#endif
+
+#ifndef discard_const
+#define discard_const(ptr) ((void *)((uintptr_t)(ptr)))
+#endif
+
+#ifndef discard_const_p
+#define discard_const_p(type, ptr) ((type *)discard_const(ptr))
+#endif
+
 #define SWRAP_DLIST_ADD(list,item) do { \
 	if (!(list)) { \
 		(item)->prev	= NULL; \
@@ -299,6 +311,19 @@ static int real_recvfrom(int sockfd, void *buf, size_t len, int flags,
 	}
 
 	return libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+}
+
+static int (*libc_sendto)(int sockfd, const void *buf, size_t len, int flags,
+			  const  struct sockaddr *dst_addr, socklen_t addrlen);
+
+static int real_sendto(int sockfd, const void *buf, size_t len, int flags,
+			 const struct sockaddr *dst_addr, socklen_t addrlen)
+{
+	if (libc_sendto == NULL) {
+		*(void **)(&libc_sendto) = libc_dlsym("sendto");
+	}
+
+	return libc_sendto(sockfd, buf, len, flags, dst_addr, addrlen);
 }
 
 static int (*libc_setsockopt)(int sockfd,
@@ -2140,7 +2165,6 @@ int ioctl(int s, unsigned long int r, ...)
 	return rc;
 }
 
-#if 0
 static ssize_t swrap_sendmsg_before(int fd,
 				    struct socket_info *si,
 				    struct msghdr *msg,
@@ -2332,7 +2356,6 @@ static void swrap_sendmsg_after(struct socket_info *si,
 	free(buf);
 	errno = saved_errno;
 }
-#endif
 
 ssize_t recvfrom(int s, void *buf, size_t len, int flags,
 		 struct sockaddr *from, socklen_t *fromlen)
@@ -2377,8 +2400,8 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
 	return ret;
 }
 
-#if 0
-_PUBLIC_ ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen)
+ssize_t sendto(int s, const void *buf, size_t len, int flags,
+	       const struct sockaddr *to, socklen_t tolen)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2444,6 +2467,7 @@ _PUBLIC_ ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags, con
 	return ret;
 }
 
+#if 0
 _PUBLIC_ ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 {
 	int ret;
