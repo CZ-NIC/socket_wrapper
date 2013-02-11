@@ -411,6 +411,17 @@ static int real_socket(int domain, int type, int protocol)
 	return libc_socket(domain, type, protocol);
 }
 
+static ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
+
+static ssize_t real_writev(int fd, const struct iovec *iov, int iovcnt)
+{
+	if (libc_writev == NULL) {
+		*(void **)(&libc_writev) = libc_dlsym("writev");
+	}
+
+	return libc_writev(fd, iov, iovcnt);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -2783,8 +2794,7 @@ ssize_t readv(int s, const struct iovec *vector, int count)
 	return ret;
 }
 
-#if 0
-ssize_t swrap_writev(int s, const struct iovec *vector, size_t count)
+ssize_t writev(int s, const struct iovec *vector, int count)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2820,6 +2830,7 @@ ssize_t swrap_writev(int s, const struct iovec *vector, size_t count)
 	return ret;
 }
 
+#if 0
 _PUBLIC_ int swrap_close(int fd)
 {
 	struct socket_info *si = find_socket_info(fd);
