@@ -245,6 +245,17 @@ static int real_dup(int fd)
 	return libc_dup(fd);
 }
 
+static int (*libc_dup2)(int oldfd, int newfd);
+
+static int real_dup2(int oldfd, int newfd)
+{
+	if (libc_dup2 == NULL) {
+		*(void **)(&libc_dup2) = libc_dlsym("dup2");
+	}
+
+	return libc_dup2(oldfd, newfd);
+}
+
 static int (*libc_getpeername)(int sockfd,
 			       struct sockaddr *addr,
 			       socklen_t *addrlen);
@@ -2928,8 +2939,7 @@ int dup(int fd)
 	return fi->fd;
 }
 
-#if 0
-_PUBLIC_ int swrap_dup2(int fd, int newfd)
+int dup2(int fd, int newfd)
 {
 	struct socket_info *si;
 	struct socket_info_fd *fi;
@@ -2943,7 +2953,7 @@ _PUBLIC_ int swrap_dup2(int fd, int newfd)
 	if (find_socket_info(newfd)) {
 		/* dup2() does an implicit close of newfd, which we
 		 * need to emulate */
-		swrap_close(newfd);
+		close(newfd);
 	}
 
 	fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
@@ -2963,4 +2973,3 @@ _PUBLIC_ int swrap_dup2(int fd, int newfd)
 	SWRAP_DLIST_ADD(si->fds, fi);
 	return fi->fd;
 }
-#endif /* 0 */
