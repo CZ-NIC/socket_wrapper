@@ -335,6 +335,17 @@ static int real_recvfrom(int sockfd, void *buf, size_t len, int flags,
 	return libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 }
 
+static int (*libc_send)(int sockfd, const void *buf, size_t len, int flags);
+
+static int real_send(int sockfd, const void *buf, size_t len, int flags)
+{
+	if (libc_send == NULL) {
+		*(void **)(&libc_send) = libc_dlsym("send");
+	}
+
+	return libc_send(sockfd, buf, len, flags);
+}
+
 static int (*libc_sendto)(int sockfd, const void *buf, size_t len, int flags,
 			  const  struct sockaddr *dst_addr, socklen_t addrlen);
 
@@ -2545,8 +2556,7 @@ ssize_t read(int s, void *buf, size_t len)
 	return ret;
 }
 
-#if 0
-_PUBLIC_ ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
+ssize_t send(int s, const void *buf, size_t len, int flags)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2585,6 +2595,7 @@ _PUBLIC_ ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	return ret;
 }
 
+#if 0
 _PUBLIC_ ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 {
 	struct msghdr msg;
