@@ -208,6 +208,17 @@ static int real_bind(int sockfd,
 	return libc_bind(sockfd, addr, addrlen);
 }
 
+static int (*libc_close)(int fd);
+
+static int real_close(int fd)
+{
+	if (libc_close == NULL) {
+		*(void **)(&libc_close) = libc_dlsym("close");
+	}
+
+	return libc_close(fd);
+}
+
 static int (*libc_connect)(int sockfd,
 			   const struct sockaddr *addr,
 			   socklen_t addrlen);
@@ -2830,8 +2841,7 @@ ssize_t writev(int s, const struct iovec *vector, int count)
 	return ret;
 }
 
-#if 0
-_PUBLIC_ int swrap_close(int fd)
+int close(int fd)
 {
 	struct socket_info *si = find_socket_info(fd);
 	struct socket_info_fd *fi;
@@ -2878,6 +2888,7 @@ _PUBLIC_ int swrap_close(int fd)
 	return ret;
 }
 
+#if 0
 _PUBLIC_ int swrap_dup(int fd)
 {
 	struct socket_info *si;
