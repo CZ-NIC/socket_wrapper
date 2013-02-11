@@ -288,6 +288,19 @@ static int real_listen(int sockfd, int backlog)
 	return libc_listen(sockfd, backlog);
 }
 
+static int (*libc_recvfrom)(int sockfd, void *buf, size_t len, int flags,
+			    struct sockaddr *src_addr, socklen_t *addrlen);
+
+static int real_recvfrom(int sockfd, void *buf, size_t len, int flags,
+			 struct sockaddr *src_addr, socklen_t *addrlen)
+{
+	if (libc_recvfrom == NULL) {
+		*(void **)(&libc_recvfrom) = libc_dlsym("recvfrom");
+	}
+
+	return libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+}
+
 static int (*libc_setsockopt)(int sockfd,
 			      int level,
 			      int optname,
@@ -2319,8 +2332,10 @@ static void swrap_sendmsg_after(struct socket_info *si,
 	free(buf);
 	errno = saved_errno;
 }
+#endif
 
-_PUBLIC_ ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen)
+ssize_t recvfrom(int s, void *buf, size_t len, int flags,
+		 struct sockaddr *from, socklen_t *fromlen)
 {
 	struct sockaddr_un un_addr;
 	socklen_t un_addrlen = sizeof(un_addr);
@@ -2362,7 +2377,7 @@ _PUBLIC_ ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags, struct 
 	return ret;
 }
 
-
+#if 0
 _PUBLIC_ ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen)
 {
 	struct msghdr msg;
