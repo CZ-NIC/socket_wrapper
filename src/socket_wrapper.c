@@ -61,6 +61,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #ifndef _PUBLIC_
 #define _PUBLIC_
@@ -257,6 +258,23 @@ static int real_getsockopt(int sockfd,
 	}
 
 	return libc_getsockopt(sockfd, level, optname, optval, optlen);
+}
+
+static int (*libc_ioctl)(int d, unsigned long int request, ...);
+
+static int real_ioctl(int d, unsigned long int request, ...) {
+	va_list va;
+	int rc;
+
+	if (libc_ioctl == NULL) {
+		*(void **)(&libc_ioctl) = libc_dlsym("ioctl");
+	}
+
+	va_start(va, request);
+	rc = libc_ioctl(d, request, va);
+	va_end(va);
+
+	return rc;
 }
 
 static int (*libc_listen)(int sockfd, int backlog);
@@ -2075,23 +2093,28 @@ int setsockopt(int s, int level, int optname,
 	}
 }
 
-#if 0
-_PUBLIC_ int swrap_ioctl(int s, int r, void *p)
+int ioctl(int s, unsigned long int r, ...)
 {
-	int ret;
+	int rc;
 	struct socket_info *si = find_socket_info(s);
 	int value;
+	va_list va;
+
+	va_start(va, r);
 
 	if (!si) {
-		return real_ioctl(s, r, p);
+		rc = real_ioctl(s, r, va);
+		va_end(va);
+
+		return rc;
 	}
 
-	ret = real_ioctl(s, r, p);
+	rc = real_ioctl(s, r, va);
 
 	switch (r) {
 	case FIONREAD:
-		value = *((int *)p);
-		if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
+		value = va_arg(va, int);
+		if (rc == -1 && errno != EAGAIN && errno != ENOBUFS) {
 			swrap_dump_packet(si, NULL, SWRAP_PENDING_RST, NULL, 0);
 		} else if (value == 0) { /* END OF FILE */
 			swrap_dump_packet(si, NULL, SWRAP_PENDING_RST, NULL, 0);
@@ -2099,9 +2122,12 @@ _PUBLIC_ int swrap_ioctl(int s, int r, void *p)
 		break;
 	}
 
-	return ret;
+	va_end(va);
+
+	return rc;
 }
 
+#if 0
 static ssize_t swrap_sendmsg_before(int fd,
 				    struct socket_info *si,
 				    struct msghdr *msg,
