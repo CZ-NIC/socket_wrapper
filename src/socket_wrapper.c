@@ -311,6 +311,17 @@ static int real_read(int fd, void *buf, size_t count)
 	return libc_read(fd, buf, count);
 }
 
+static ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
+
+static ssize_t real_readv(int fd, const struct iovec *iov, int iovcnt)
+{
+	if (libc_readv == NULL) {
+		*(void **)(&libc_readv) = libc_dlsym("readv");
+	}
+
+	return libc_readv(fd, iov, iovcnt);
+}
+
 static int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
 
 static int real_recv(int sockfd, void *buf, size_t len, int flags)
@@ -2699,8 +2710,7 @@ ssize_t sendmsg(int s, const struct msghdr *omsg, int flags)
 	return ret;
 }
 
-#if 0
-int swrap_readv(int s, const struct iovec *vector, size_t count)
+ssize_t readv(int s, const struct iovec *vector, int count)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -2719,9 +2729,10 @@ int swrap_readv(int s, const struct iovec *vector, size_t count)
 		/* cut down to 1500 byte packets for stream sockets,
 		 * which makes it easier to format PCAP capture files
 		 * (as the caller will simply continue from here) */
-		size_t i, len = 0;
+		int i;
+		size_t len = 0;
 
-		for (i=0; i < count; i++) {
+		for (i = 0; i < count; i++) {
 			size_t nlen;
 			nlen = len + vector[i].iov_len;
 			if (nlen > 1500) {
@@ -2745,7 +2756,7 @@ int swrap_readv(int s, const struct iovec *vector, size_t count)
 	} else if (ret > 0) {
 		uint8_t *buf;
 		off_t ofs = 0;
-		size_t i;
+		int i;
 		size_t remain = ret;
 
 		/* we capture it as one single packet */
@@ -2772,6 +2783,7 @@ int swrap_readv(int s, const struct iovec *vector, size_t count)
 	return ret;
 }
 
+#if 0
 ssize_t swrap_writev(int s, const struct iovec *vector, size_t count)
 {
 	struct msghdr msg;
