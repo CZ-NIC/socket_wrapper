@@ -1,0 +1,3 @@
+* Fix short reads (1500 is hardcoded).
+* We might need serialization so we don't call wrapper symbols recursively.
+* Add logging for debug.
