@@ -240,6 +240,25 @@ static int real_getsockname(int sockfd,
 	return libc_getsockname(sockfd, addr, addrlen);
 }
 
+static int (*libc_getsockopt)(int sockfd,
+			      int level,
+			      int optname,
+			      void *optval,
+			      socklen_t *optlen);
+
+static int real_getsockopt(int sockfd,
+			   int level,
+			   int optname,
+			   void *optval,
+			   socklen_t *optlen)
+{
+	if (libc_getsockopt == NULL) {
+		*(void **)(&libc_getsockopt) = libc_dlsym("getsockopt");
+	}
+
+	return libc_getsockopt(sockfd, level, optname, optval, optlen);
+}
+
 static int (*libc_listen)(int sockfd, int backlog);
 
 static int real_listen(int sockfd, int backlog)
@@ -1996,8 +2015,7 @@ int getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
-#if 0
-_PUBLIC_ int swrap_getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
+int getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -2007,12 +2025,13 @@ _PUBLIC_ int swrap_getsockopt(int s, int level, int optname, void *optval, sockl
 
 	if (level == SOL_SOCKET) {
 		return real_getsockopt(s, level, optname, optval, optlen);
-	} 
+	}
 
 	errno = ENOPROTOOPT;
 	return -1;
 }
 
+#if 0
 _PUBLIC_ int swrap_setsockopt(int s, int  level,  int  optname,  const  void  *optval, socklen_t optlen)
 {
 	struct socket_info *si = find_socket_info(s);
