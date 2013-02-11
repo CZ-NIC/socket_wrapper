@@ -234,6 +234,17 @@ static int real_connect(int sockfd,
 	return libc_connect(sockfd, addr, addrlen);
 }
 
+static int (*libc_dup)(int fd);
+
+static int real_dup(int fd)
+{
+	if (libc_dup == NULL) {
+		*(void **)(&libc_dup) = libc_dlsym("dup");
+	}
+
+	return libc_dup(fd);
+}
+
 static int (*libc_getpeername)(int sockfd,
 			       struct sockaddr *addr,
 			       socklen_t *addrlen);
@@ -2888,8 +2899,7 @@ int close(int fd)
 	return ret;
 }
 
-#if 0
-_PUBLIC_ int swrap_dup(int fd)
+int dup(int fd)
 {
 	struct socket_info *si;
 	struct socket_info_fd *fi;
@@ -2918,6 +2928,7 @@ _PUBLIC_ int swrap_dup(int fd)
 	return fi->fd;
 }
 
+#if 0
 _PUBLIC_ int swrap_dup2(int fd, int newfd)
 {
 	struct socket_info *si;
