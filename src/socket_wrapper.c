@@ -143,18 +143,27 @@
 
 #include <dlfcn.h>
 
-#define LIBC_NAME "libc.so.6"
+#define LIBC_NAME "libc.so"
 
 static void *libc_hnd;
 
 static int libc_dlopen(void)
 {
+	unsigned int i;
+
 	if (libc_hnd != NULL) {
 		return 0;
 	}
-	libc_hnd = dlopen(LIBC_NAME, RTLD_LAZY);
+
+	for (libc_hnd = NULL, i = 10; libc_hnd == NULL; i--) {
+		char soname[256] = {0};
+
+		snprintf(soname, sizeof(soname), "%s.%u", LIBC_NAME, i);
+		libc_hnd = dlopen(soname, RTLD_LAZY);
+	}
+
 	if (libc_hnd == NULL) {
-		printf("Failed to dlopen %s: %s\n", LIBC_NAME, dlerror());
+		printf("Failed to dlopen %s.%u: %s\n", LIBC_NAME, i, dlerror());
 		exit(-1);
 	}
 
