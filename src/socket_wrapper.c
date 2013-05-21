@@ -132,6 +132,13 @@
 #define SOCKET_TYPE_CHAR_TCP_V6		'X'
 #define SOCKET_TYPE_CHAR_UDP_V6		'Y'
 
+/*
+ * Cut down to 1500 byte packets for stream sockets,
+ * which makes it easier to format PCAP capture files
+ * (as the caller will simply continue from here)
+ */
+#define SOCKET_MAX_PACKET 1500
+
 /* This limit is to avoid broadcast sendto() needing to stat too many
  * files.  It may be raised (with a performance cost) to up to 254
  * without changing the format above */
@@ -2306,23 +2313,17 @@ static ssize_t swrap_sendmsg_before(int fd,
 			break;
 		}
 
-		/*
-		 * cut down to 1500 byte packets for stream sockets,
-		 * which makes it easier to format PCAP capture files
-		 * (as the caller will simply continue from here)
-		 */
-
 		for (i=0; i < msg->msg_iovlen; i++) {
 			size_t nlen;
 			nlen = len + msg->msg_iov[i].iov_len;
-			if (nlen > 1500) {
+			if (nlen > SOCKET_MAX_PACKET) {
 				break;
 			}
 		}
 		msg->msg_iovlen = i;
 		if (msg->msg_iovlen == 0) {
 			*tmp_iov = msg->msg_iov[0];
-			tmp_iov->iov_len = MIN(tmp_iov->iov_len, 1500);
+			tmp_iov->iov_len = MIN(tmp_iov->iov_len, SOCKET_MAX_PACKET);
 			msg->msg_iov = tmp_iov;
 			msg->msg_iovlen = 1;
 		}
@@ -2485,10 +2486,7 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
 	}
 
 	if (si->type == SOCK_STREAM) {
-		/* cut down to 1500 byte packets for stream sockets,
-		 * which makes it easier to format PCAP capture files
-		 * (as the caller will simply continue from here) */
-		len = MIN(len, 1500);
+		len = MIN(len, SOCKET_MAX_PACKET);
 	}
 
 	/* irix 6.4 forgets to null terminate the sun_path string :-( */
@@ -2585,10 +2583,7 @@ ssize_t recv(int s, void *buf, size_t len, int flags)
 	}
 
 	if (si->type == SOCK_STREAM) {
-		/* cut down to 1500 byte packets for stream sockets,
-		 * which makes it easier to format PCAP capture files
-		 * (as the caller will simply continue from here) */
-		len = MIN(len, 1500);
+		len = MIN(len, SOCKET_MAX_PACKET);
 	}
 
 	ret = real_recv(s, buf, len, flags);
@@ -2613,10 +2608,7 @@ ssize_t read(int s, void *buf, size_t len)
 	}
 
 	if (si->type == SOCK_STREAM) {
-		/* cut down to 1500 byte packets for stream sockets,
-		 * which makes it easier to format PCAP capture files
-		 * (as the caller will simply continue from here) */
-		len = MIN(len, 1500);
+		len = MIN(len, SOCKET_MAX_PACKET);
 	}
 
 	ret = real_read(s, buf, len);
@@ -2779,23 +2771,20 @@ ssize_t readv(int s, const struct iovec *vector, int count)
 	}
 
 	if (si->type == SOCK_STREAM && count > 0) {
-		/* cut down to 1500 byte packets for stream sockets,
-		 * which makes it easier to format PCAP capture files
-		 * (as the caller will simply continue from here) */
 		int i;
 		size_t len = 0;
 
 		for (i = 0; i < count; i++) {
 			size_t nlen;
 			nlen = len + vector[i].iov_len;
-			if (nlen > 1500) {
+			if (nlen > SOCKET_MAX_PACKET) {
 				break;
 			}
 		}
 		count = i;
 		if (count == 0) {
 			v = vector[0];
-			v.iov_len = MIN(v.iov_len, 1500);
+			v.iov_len = MIN(v.iov_len, SOCKET_MAX_PACKET);
 			vector = &v;
 			count = 1;
 		}
