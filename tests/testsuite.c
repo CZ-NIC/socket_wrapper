@@ -1,83 +1,76 @@
-/* 
-   Unix SMB/CIFS implementation.
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <cmocka.h>
 
-   local testing of the socket wrapper
+#include <sys/types.h>
+#include <sys/socket.h>
 
-   Copyright (C) Jelmer Vernooij 2007
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include "includes.h"
-#include "system/network.h"
-#include "../socket_wrapper/socket_wrapper.h"
-#include "torture/torture.h"
-
-static char *old_dir = NULL;
-static char *old_iface = NULL;
-
-static void backup_env(void)
+static void setup(void **state)
 {
-	old_dir = getenv("SOCKET_WRAPPER_DIR");
-	old_iface = getenv("SOCKET_WRAPPER_DEFAULT_IFACE");
+	char test_tmpdir[256];
+	const char *p;
+
+	(void) state; /* unused */
+
+	snprintf(test_tmpdir, sizeof(test_tmpdir), "/tmp/test_socket_wrapper_XXXXXX");
+
+	p = mkdtemp(test_tmpdir);
+	assert_non_null(p);
+
+	setenv("SOCKET_WRAPPER_DIR", p, 1);
+	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "11", 1);
 }
 
-static void restore_env(void)
+static void teardown(void **state)
 {
-	if (old_dir == NULL)
-		unsetenv("SOCKET_WRAPPER_DIR");
-	else
-		setenv("SOCKET_WRAPPER_DIR", old_dir, 1);
-	if (old_iface == NULL)
-		unsetenv("SOCKET_WRAPPER_DEFAULT_IFACE");
-	else
-		setenv("SOCKET_WRAPPER_DEFAULT_IFACE", old_iface, 1);
+	char remove_cmd[256];
+	const char *swrap_dir = getenv("SOCKET_WRAPPER_DIR");
+
+	(void) state; /* unused */
+
+	if (swrap_dir != NULL) {
+		snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", swrap_dir);
+	}
+
+	system(remove_cmd);
 }
 
-static bool test_socket_wrapper_dir(struct torture_context *tctx)
+#if 0
+static void test_socket_wrapper_dir(void **state)
 {
 	backup_env();
 
 	setenv("SOCKET_WRAPPER_DIR", "foo", 1);
-	torture_assert_str_equal(tctx, socket_wrapper_dir(), "foo", "setting failed");
+	assert_string_equal(socket_wrapper_dir(), "foo");
 	setenv("SOCKET_WRAPPER_DIR", "./foo", 1);
-	torture_assert_str_equal(tctx, socket_wrapper_dir(), "foo", "setting failed");
+	assert_string_equal(socket_wrapper_dir(), "foo");
 	unsetenv("SOCKET_WRAPPER_DIR");
-	torture_assert_str_equal(tctx, socket_wrapper_dir(), NULL, "resetting failed");
+	assert_non_null(socket_wrapper_dir());
 
 	restore_env();
-
-	return true;
 }
+#endif
 
-static bool test_swrap_socket(struct torture_context *tctx)
+static void test_swrap_socket(void **state)
 {
-	backup_env();
-	setenv("SOCKET_WRAPPER_DIR", "foo", 1);
+	(void) state; /* unused */
 
-	torture_assert_int_equal(tctx, swrap_socket(1337, 1337, 0), -1, "unknown address family fails");
-	torture_assert_int_equal(tctx, errno, EAFNOSUPPORT, "correct errno set");
-	torture_assert_int_equal(tctx, swrap_socket(AF_INET, 1337, 0), -1, "unknown type fails");
-	torture_assert_int_equal(tctx, errno, EPROTONOSUPPORT, "correct errno set");
-	torture_assert_int_equal(tctx, swrap_socket(AF_INET, SOCK_DGRAM, 10), -1, "unknown protocol fails");
-	torture_assert_int_equal(tctx, errno, EPROTONOSUPPORT, "correct errno set");
+	assert_int_equal(socket(1337, 1337, 0), -1);
+	assert_int_equal(errno, EAFNOSUPPORT);
 
-	restore_env();
+	assert_int_equal(socket(AF_INET, 1337, 0), -1);
+	assert_int_equal(errno, EPROTONOSUPPORT);
 
-	return true;
+	assert_int_equal(socket(AF_INET, SOCK_DGRAM, 10), -1);
+	assert_int_equal(errno, EPROTONOSUPPORT);
 }
 
+#if 0
 unsigned int socket_wrapper_default_iface(void);
 static bool test_socket_wrapper_default_iface(struct torture_context *tctx)
 {
@@ -91,15 +84,16 @@ static bool test_socket_wrapper_default_iface(struct torture_context *tctx)
 	restore_env();
 	return true;
 }
+#endif
 
-struct torture_suite *torture_local_socket_wrapper(TALLOC_CTX *mem_ctx)
-{
-	struct torture_suite *suite = torture_suite_create(mem_ctx, 
-													   "socket-wrapper");
+int main(void) {
+	int rc;
 
-	torture_suite_add_simple_test(suite, "socket_wrapper_dir", test_socket_wrapper_dir);
-	torture_suite_add_simple_test(suite, "socket", test_swrap_socket);
-	torture_suite_add_simple_test(suite, "socket_wrapper_default_iface", test_socket_wrapper_default_iface);
+	const UnitTest tests[] = {
+		unit_test_setup_teardown(test_swrap_socket, setup, teardown),
+	};
 
-	return suite;
+	rc = run_tests(tests);
+
+	return rc;
 }
