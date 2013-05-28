@@ -132,7 +132,15 @@ int main(void) {
     return 0;
 }" HAVE_SOCKADDR_STORAGE)
 
+check_library_exists(dl dlopen "" HAVE_LIBDL)
+if (HAVE_LIBDL)
+    find_library(DLFCN_LIBRARY dl)
+    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${DLFCN_LIBRARY})
+endif (HAVE_LIBDL)
+
 # ENDIAN
 if (NOT WIN32)
     test_big_endian(WORDS_BIGENDIAN)
 endif (NOT WIN32)
+
+set(SWRAP_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} CACHE INTERNAL "swrap required system libraries")
