@@ -7,3 +7,7 @@ include_directories(
 )
 
 add_cmocka_test(testsuite testsuite.c ${CMOCKA_LIBRARY})
+set_tests_properties(
+    testsuite
+        PROPERTIES
+        ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/src/libsocket_wrapper.so)
