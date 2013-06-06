@@ -1738,7 +1738,11 @@ static void swrap_dump_packet(struct socket_info *si,
 	free(packet);
 }
 
-int socket(int family, int type, int protocol)
+/****************************************************************************
+ *   SOCKET
+ ***************************************************************************/
+
+static int swrap_socket(int family, int type, int protocol)
 {
 	struct socket_info *si;
 	struct socket_info_fd *fi;
@@ -1830,7 +1834,16 @@ int socket(int family, int type, int protocol)
 	return fd;
 }
 
-int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
+int socket(int family, int type, int protocol)
+{
+	return swrap_socket(family, type, protocol);
+}
+
+/****************************************************************************
+ *   ACCEPT
+ ***************************************************************************/
+
+static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 {
 	struct socket_info *parent_si, *child_si;
 	struct socket_info_fd *child_fi;
@@ -1948,6 +1961,11 @@ int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 	swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_ACK, NULL, 0);
 
 	return fd;
+}
+
+int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
+{
+	return swrap_accept(s, addr, addrlen);
 }
 
 static int autobind_start_init;
@@ -2068,8 +2086,12 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 	return 0;
 }
 
+/****************************************************************************
+ *   CONNECT
+ ***************************************************************************/
 
-int connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
+static int swrap_connect(int s, const struct sockaddr *serv_addr,
+			 socklen_t addrlen)
 {
 	int ret;
 	struct sockaddr_un un_addr;
@@ -2128,7 +2150,16 @@ int connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
 	return ret;
 }
 
-int bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
+int connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
+{
+	return swrap_connect(s, serv_addr, addrlen);
+}
+
+/****************************************************************************
+ *   BIND
+ ***************************************************************************/
+
+static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 {
 	int ret;
 	struct sockaddr_un un_addr;
@@ -2156,7 +2187,16 @@ int bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 	return ret;
 }
 
-int listen(int s, int backlog)
+int bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
+{
+	return swrap_bind(s, myaddr, addrlen);
+}
+
+/****************************************************************************
+ *   LISTEN
+ ***************************************************************************/
+
+static int swrap_listen(int s, int backlog)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -2170,7 +2210,16 @@ int listen(int s, int backlog)
 	return ret;
 }
 
-int getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
+int listen(int s, int backlog)
+{
+	return swrap_listen(s, backlog);
+}
+
+/****************************************************************************
+ *   GETPEERNAME
+ ***************************************************************************/
+
+static int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -2190,7 +2239,16 @@ int getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
-int getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
+int getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
+{
+	return swrap_getpeername(s, name, addrlen);
+}
+
+/****************************************************************************
+ *   GETSOCKNAME
+ ***************************************************************************/
+
+static int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -2204,7 +2262,17 @@ int getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
-int getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
+int getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
+{
+	return swrap_getsockname(s, name, addrlen);
+}
+
+/****************************************************************************
+ *   GETSOCKOPT
+ ***************************************************************************/
+
+static int swrap_getsockopt(int s, int level, int optname,
+			    void *optval, socklen_t *optlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -2220,8 +2288,17 @@ int getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
 	return -1;
 }
 
-int setsockopt(int s, int level, int optname,
-	       const void *optval, socklen_t optlen)
+int getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
+{
+	return swrap_getsockopt(s, level, optname, optval, optlen);
+}
+
+/****************************************************************************
+ *   SETSOCKOPT
+ ***************************************************************************/
+
+static int swrap_setsockopt(int s, int level, int optname,
+			    const void *optval, socklen_t optlen)
 {
 	struct socket_info *si = find_socket_info(s);
 
@@ -2246,14 +2323,21 @@ int setsockopt(int s, int level, int optname,
 	}
 }
 
-int ioctl(int s, unsigned long int r, ...)
+int setsockopt(int s, int level, int optname,
+	       const void *optval, socklen_t optlen)
 {
-	int rc;
+	return swrap_setsockopt(s, level, optname, optval, optlen);
+}
+
+/****************************************************************************
+ *   IOCTL
+ ***************************************************************************/
+
+static int swrap_ioctl(int s, unsigned long int r, va_list va)
+{
 	struct socket_info *si = find_socket_info(s);
 	int value;
-	va_list va;
-
-	va_start(va, r);
+	int rc;
 
 	if (!si) {
 		rc = real_ioctl(s, r, va);
@@ -2274,6 +2358,18 @@ int ioctl(int s, unsigned long int r, ...)
 		}
 		break;
 	}
+
+	return rc;
+}
+
+int ioctl(int s, unsigned long int r, ...)
+{
+	va_list va;
+	int rc;
+
+	va_start(va, r);
+
+	rc = swrap_ioctl(s, r, va);
 
 	va_end(va);
 
@@ -2466,8 +2562,12 @@ static void swrap_sendmsg_after(struct socket_info *si,
 	errno = saved_errno;
 }
 
-ssize_t recvfrom(int s, void *buf, size_t len, int flags,
-		 struct sockaddr *from, socklen_t *fromlen)
+/****************************************************************************
+ *   RECVFROM
+ ***************************************************************************/
+
+static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
+			      struct sockaddr *from, socklen_t *fromlen)
 {
 	struct sockaddr_un un_addr;
 	socklen_t un_addrlen = sizeof(un_addr);
@@ -2506,8 +2606,18 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
 	return ret;
 }
 
-ssize_t sendto(int s, const void *buf, size_t len, int flags,
-	       const struct sockaddr *to, socklen_t tolen)
+ssize_t recvfrom(int s, void *buf, size_t len, int flags,
+		 struct sockaddr *from, socklen_t *fromlen)
+{
+	return swrap_recvfrom(s, buf, len, flags, from, fromlen);
+}
+
+/****************************************************************************
+ *   SENDTO
+ ***************************************************************************/
+
+static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
+			    const struct sockaddr *to, socklen_t tolen)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2573,7 +2683,17 @@ ssize_t sendto(int s, const void *buf, size_t len, int flags,
 	return ret;
 }
 
-ssize_t recv(int s, void *buf, size_t len, int flags)
+ssize_t sendto(int s, const void *buf, size_t len, int flags,
+	       const struct sockaddr *to, socklen_t tolen)
+{
+	return swrap_sendto(s, buf, len, flags, to, tolen);
+}
+
+/****************************************************************************
+ *   READV
+ ***************************************************************************/
+
+static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -2598,7 +2718,16 @@ ssize_t recv(int s, void *buf, size_t len, int flags)
 	return ret;
 }
 
-ssize_t read(int s, void *buf, size_t len)
+ssize_t recv(int s, void *buf, size_t len, int flags)
+{
+	return swrap_recv(s, buf, len, flags);
+}
+
+/****************************************************************************
+ *   READ
+ ***************************************************************************/
+
+static ssize_t swrap_read(int s, void *buf, size_t len)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -2623,7 +2752,16 @@ ssize_t read(int s, void *buf, size_t len)
 	return ret;
 }
 
-ssize_t send(int s, const void *buf, size_t len, int flags)
+ssize_t read(int s, void *buf, size_t len)
+{
+	return swrap_read(s, buf, len);
+}
+
+/****************************************************************************
+ *   SEND
+ ***************************************************************************/
+
+static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2662,7 +2800,22 @@ ssize_t send(int s, const void *buf, size_t len, int flags)
 	return ret;
 }
 
-ssize_t sendmsg(int s, const struct msghdr *omsg, int flags)
+ssize_t send(int s, const void *buf, size_t len, int flags)
+{
+	return swrap_send(s, buf, len, flags);
+}
+
+/****************************************************************************
+ *   RECVMSG
+ ***************************************************************************/
+
+/* TODO */
+
+/****************************************************************************
+ *   SENDMSG
+ ***************************************************************************/
+
+static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2755,7 +2908,16 @@ ssize_t sendmsg(int s, const struct msghdr *omsg, int flags)
 	return ret;
 }
 
-ssize_t readv(int s, const struct iovec *vector, int count)
+ssize_t sendmsg(int s, const struct msghdr *omsg, int flags)
+{
+	return swrap_sendmsg(s, omsg, flags);
+}
+
+/****************************************************************************
+ *   READV
+ ***************************************************************************/
+
+static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 {
 	int ret;
 	struct socket_info *si = find_socket_info(s);
@@ -2825,7 +2987,16 @@ ssize_t readv(int s, const struct iovec *vector, int count)
 	return ret;
 }
 
-ssize_t writev(int s, const struct iovec *vector, int count)
+ssize_t readv(int s, const struct iovec *vector, int count)
+{
+	return swrap_readv(s, vector, count);
+}
+
+/****************************************************************************
+ *   WRITEV
+ ***************************************************************************/
+
+static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 {
 	struct msghdr msg;
 	struct iovec tmp;
@@ -2861,7 +3032,16 @@ ssize_t writev(int s, const struct iovec *vector, int count)
 	return ret;
 }
 
-int close(int fd)
+ssize_t writev(int s, const struct iovec *vector, int count)
+{
+	return swrap_writev(s, vector, count);
+}
+
+/****************************
+ * CLOSE
+ ***************************/
+
+static int swrap_close(int fd)
 {
 	struct socket_info *si = find_socket_info(fd);
 	struct socket_info_fd *fi;
@@ -2908,7 +3088,16 @@ int close(int fd)
 	return ret;
 }
 
-int dup(int fd)
+int close(int fd)
+{
+	return swrap_close(fd);
+}
+
+/****************************
+ * DUP
+ ***************************/
+
+static int swrap_dup(int fd)
 {
 	struct socket_info *si;
 	struct socket_info_fd *fi;
@@ -2937,7 +3126,16 @@ int dup(int fd)
 	return fi->fd;
 }
 
-int dup2(int fd, int newfd)
+int dup(int fd)
+{
+	return swrap_dup(fd);
+}
+
+/****************************
+ * DUP2
+ ***************************/
+
+static int swrap_dup2(int fd, int newfd)
 {
 	struct socket_info *si;
 	struct socket_info_fd *fi;
@@ -2951,7 +3149,7 @@ int dup2(int fd, int newfd)
 	if (find_socket_info(newfd)) {
 		/* dup2() does an implicit close of newfd, which we
 		 * need to emulate */
-		close(newfd);
+		swrap_close(newfd);
 	}
 
 	fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
@@ -2970,4 +3168,9 @@ int dup2(int fd, int newfd)
 
 	SWRAP_DLIST_ADD(si->fds, fi);
 	return fi->fd;
+}
+
+int dup2(int fd, int newfd)
+{
+	return swrap_dup2(fd, newfd);
 }
