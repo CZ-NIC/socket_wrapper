@@ -50,8 +50,8 @@ configure_file(config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 # check subdirectories
 add_subdirectory(src)
 
-if (WITH_TESTING)
+if (UNIT_TESTING)
   find_package(CMocka REQUIRED)
   include(AddCMockaTest)
   add_subdirectory(tests)
-endif (WITH_TESTING)
+endif (UNIT_TESTING)

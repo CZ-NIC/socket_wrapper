@@ -1,1 +1,1 @@
-option(WITH_TESTING "Build with unit tests" OFF)
+option(UNIT_TESTING "Build with unit tests" OFF)
