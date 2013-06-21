@@ -323,17 +323,20 @@ static int real_getsockopt(int sockfd,
 
 static int (*libc_ioctl)(int d, unsigned long int request, ...);
 
-static int real_ioctl(int d, unsigned long int request, ...) {
-	va_list va;
+static int real_vioctl(int d, unsigned long int request, va_list ap) {
+	long int args[4];
 	int rc;
+	int i;
 
 	if (libc_ioctl == NULL) {
 		*(void **)(&libc_ioctl) = libc_dlsym("ioctl");
 	}
 
-	va_start(va, request);
-	rc = libc_ioctl(d, request, va);
-	va_end(va);
+	for (i = 0; i < 4; i++) {
+		args[i] = va_arg(ap, long int);
+	}
+
+	rc = libc_ioctl(d, request, args[0], args[1], args[2], args[3]);
 
 	return rc;
 }
@@ -2333,30 +2336,25 @@ int setsockopt(int s, int level, int optname,
  *   IOCTL
  ***************************************************************************/
 
-static int swrap_ioctl(int s, unsigned long int r, va_list va)
+static int swrap_vioctl(int s, unsigned long int r, va_list va)
 {
 	struct socket_info *si = find_socket_info(s);
-	long int args[4];
+	va_list ap;
 	int value;
 	int rc;
-	int i;
-
-	for (i = 0; i < 4; i++) {
-		args[i] = va_arg(va, long int);
-	}
 
 	if (!si) {
-		rc = real_ioctl(s, r, args[0], args[1], args[2], args[3]);
-		va_end(va);
-
-		return rc;
+		return real_vioctl(s, r, va);
 	}
 
-	rc = real_ioctl(s, r, args[0], args[1], args[2], args[3]);
+	va_copy(ap, va);
+
+	rc = real_vioctl(s, r, va);
 
 	switch (r) {
 	case FIONREAD:
-		value = (int) args[0];
+		value = *((int *)va_arg(ap, int *));
+
 		if (rc == -1 && errno != EAGAIN && errno != ENOBUFS) {
 			swrap_dump_packet(si, NULL, SWRAP_PENDING_RST, NULL, 0);
 		} else if (value == 0) { /* END OF FILE */
@@ -2364,6 +2362,8 @@ static int swrap_ioctl(int s, unsigned long int r, va_list va)
 		}
 		break;
 	}
+
+	va_end(ap);
 
 	return rc;
 }
@@ -2375,7 +2375,7 @@ int ioctl(int s, unsigned long int r, ...)
 
 	va_start(va, r);
 
-	rc = swrap_ioctl(s, r, va);
+	rc = swrap_vioctl(s, r, va);
 
 	va_end(va);
 
