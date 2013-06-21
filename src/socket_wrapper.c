@@ -2018,6 +2018,10 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 		return ret;
 	}
 
+	SWRAP_LOG(SWRAP_LOG_TRACE,
+		  "accept() path=%s, fd=%d",
+		  un_my_addr.sun_path, s);
+
 	child_si->myname_len = len;
 	child_si->myname = sockaddr_dup(my_addr, len);
 	free(my_addr);
@@ -2199,6 +2203,11 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 				   sizeof(struct sockaddr_un));
 	}
 
+	SWRAP_LOG(SWRAP_LOG_TRACE,
+		  "connect() path=%s, fd=%d",
+		  un_addr.sun_path, s);
+
+
 	/* to give better errors */
 	if (ret == -1 && errno == ENOENT) {
 		errno = EHOSTUNREACH;
@@ -2247,6 +2256,10 @@ static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 
 	ret = real_bind(s, (struct sockaddr *)(void *)&un_addr,
 			sizeof(struct sockaddr_un));
+
+	SWRAP_LOG(SWRAP_LOG_TRACE,
+		  "bind() path=%s, fd=%d",
+		  un_addr.sun_path, s);
 
 	if (ret == 0) {
 		si->bound = 1;
