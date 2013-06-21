@@ -2577,7 +2577,7 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 {
 	struct sockaddr_un un_addr;
 	socklen_t un_addrlen = sizeof(un_addr);
-	int ret;
+	ssize_t ret;
 	struct socket_info *si = find_socket_info(s);
 	struct sockaddr_storage ss;
 	socklen_t ss_len = sizeof(ss);
@@ -2701,7 +2701,7 @@ ssize_t sendto(int s, const void *buf, size_t len, int flags,
 
 static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 {
-	int ret;
+	ssize_t ret;
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
@@ -2735,7 +2735,7 @@ ssize_t recv(int s, void *buf, size_t len, int flags)
 
 static ssize_t swrap_read(int s, void *buf, size_t len)
 {
-	int ret;
+	ssize_t ret;
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
@@ -2925,7 +2925,7 @@ ssize_t sendmsg(int s, const struct msghdr *omsg, int flags)
 
 static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 {
-	int ret;
+	ssize_t ret;
 	struct socket_info *si = find_socket_info(s);
 	struct iovec v;
 
