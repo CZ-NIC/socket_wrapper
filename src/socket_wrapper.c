@@ -63,8 +63,70 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-#ifndef _PUBLIC_
-#define _PUBLIC_
+enum swrap_dbglvl_e {
+	SWRAP_LOG_ERROR = 0,
+	SWRAP_LOG_WARN,
+	SWRAP_LOG_DEBUG,
+	SWRAP_LOG_TRACE
+};
+
+#ifdef NDEBUG
+#define SWRAP_LOG(dbglvl, ...)
+#else
+
+/* GCC have printf type attribute check. */
+#ifdef __GNUC__
+#define PRINTF_ATTRIBUTE(a,b) __attribute__ ((__format__ (__printf__, a, b)))
+#else
+#define PRINTF_ATTRIBUTE(a,b)
+#endif /* __GNUC__ */
+
+static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
+
+static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
+{
+	char buffer[1024];
+	va_list va;
+	const char *d;
+	unsigned int lvl = 0;
+
+	d = getenv("SOCKET_WRAPPER_DBGLVL");
+	if (d != NULL) {
+		lvl = atoi(d);
+	}
+
+	va_start(va, format);
+	vsnprintf(buffer, sizeof(buffer), format, va);
+	va_end(va);
+
+	if (lvl >= dbglvl) {
+		switch (dbglvl) {
+			case SWRAP_LOG_ERROR:
+				fprintf(stderr,
+					"SWRAP_ERROR(%d): %s\n",
+					getpid(), buffer);
+				break;
+			case SWRAP_LOG_WARN:
+				fprintf(stderr,
+					"SWRAP_WARN(%d): %s\n",
+					getpid(), buffer);
+				break;
+			case SWRAP_LOG_DEBUG:
+				fprintf(stderr,
+					"SWRAP_DEBUG(%d): %s\n",
+					getpid(), buffer);
+				break;
+			case SWRAP_LOG_TRACE:
+				fprintf(stderr,
+					"SWRAP_TRACE(%d): %s\n",
+					getpid(), buffer);
+				break;
+		}
+	}
+
+}
+
+#define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __VA_ARGS__)
 #endif
 
 #ifndef MIN
@@ -170,7 +232,9 @@ static int libc_dlopen(void)
 	}
 
 	if (libc_hnd == NULL) {
-		printf("Failed to dlopen %s.%u: %s\n", LIBC_NAME, i, dlerror());
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Failed to dlopen %s.%u: %s\n",
+			  LIBC_NAME, i, dlerror());
 		exit(-1);
 	}
 
@@ -186,8 +250,9 @@ static void *libc_dlsym(const char *name)
 	func = dlsym(libc_hnd, name);
 
 	if (func == NULL) {
-		printf("Failed to find %s in %s: %s\n",
-				name, LIBC_NAME, dlerror());
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Failed to find %s in %s: %s\n",
+			  name, LIBC_NAME, dlerror());
 		exit(-1);
 	}
 
