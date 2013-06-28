@@ -16,3 +16,8 @@ SOCKET_WRAPPER_DEFAULT_IFACE
 SOCKET_WRAPPER_PCAP_FILE
     If set then all traffic will be written to the
     specified pcap file.
+
+SOCKET_WRAPPER_DEBUGLEVEL
+   If you socket_wrapper with with debug symbols
+   you can turn on logging by setting this to an
+   integer between 1 and 5.

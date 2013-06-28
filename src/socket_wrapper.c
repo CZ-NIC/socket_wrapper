@@ -90,7 +90,7 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
 	const char *d;
 	unsigned int lvl = 0;
 
-	d = getenv("SOCKET_WRAPPER_DBGLVL");
+	d = getenv("SOCKET_WRAPPER_DEBUGLEVEL");
 	if (d != NULL) {
 		lvl = atoi(d);
 	}
