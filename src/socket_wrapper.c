@@ -219,6 +219,11 @@ static void *libc_hnd;
 static int libc_dlopen(void)
 {
 	unsigned int i;
+	int flags = RTLD_LAZY;
+
+#ifdef RTLD_DEEPBIND
+	flags |= RTLD_DEEPBIND;
+#endif
 
 	if (libc_hnd != NULL) {
 		return 0;
@@ -228,7 +233,7 @@ static int libc_dlopen(void)
 		char soname[256] = {0};
 
 		snprintf(soname, sizeof(soname), "%s.%u", LIBC_NAME, i);
-		libc_hnd = dlopen(soname, RTLD_LAZY);
+		libc_hnd = dlopen(soname, flags);
 	}
 
 	if (libc_hnd == NULL) {
