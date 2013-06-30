@@ -132,6 +132,18 @@ int main(void) {
     return 0;
 }" HAVE_SOCKADDR_STORAGE)
 
+check_c_source_compiles("
+void test_destructor_attribute(void) __attribute__ ((destructor));
+
+void test_destructor_attribute(void)
+{
+    return;
+}
+
+int main(void) {
+    return 0;
+}" HAVE_DESTRUCTOR_ATTRIBUTE)
+
 check_library_exists(dl dlopen "" HAVE_LIBDL)
 if (HAVE_LIBDL)
     find_library(DLFCN_LIBRARY dl)

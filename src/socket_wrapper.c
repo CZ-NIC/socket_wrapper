@@ -81,6 +81,12 @@ enum swrap_dbglvl_e {
 #define PRINTF_ATTRIBUTE(a,b)
 #endif /* __GNUC__ */
 
+#ifdef HAVE_DESTRUCTOR_ATTRIBUTE
+#define DESTRUCTOR_ATTRIBUTE __attribute__ ((destructor))
+#else
+#define DESTRUCTOR_ATTRIBUTE
+#endif
+
 static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
 
 static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
@@ -205,6 +211,8 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
  * files.  It may be raised (with a performance cost) to up to 254
  * without changing the format above */
 #define MAX_WRAPPED_INTERFACES 40
+
+void swrap_destructor(void) DESTRUCTOR_ATTRIBUTE;
 
 /*********************************************************
  * SWRAP LOADING LIBC FUNCTIONS
@@ -3262,4 +3270,25 @@ static int swrap_dup2(int fd, int newfd)
 int dup2(int fd, int newfd)
 {
 	return swrap_dup2(fd, newfd);
+}
+
+/****************************
+ * DESTRUCTOR
+ ***************************/
+
+/*
+ * This function is called when the library is unloaded and makes sure that
+ * sockets get closed and the unix file for the socket are unlinked.
+ */
+void swrap_destructor(void)
+{
+	struct socket_info *s = sockets;
+
+	while (s != NULL) {
+		struct socket_info_fd *f = s->fds;
+		if (f != NULL) {
+			swrap_close(f->fd);
+		}
+		s = sockets;
+	}
 }

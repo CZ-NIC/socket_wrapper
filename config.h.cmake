@@ -28,6 +28,7 @@
 
 /**************************** OPTIONS ****************************/
 
+#cmakedefine HAVE_DESTRUCTOR_ATTRIBUTE 1
 #cmakedefine HAVE_SOCKADDR_STORAGE 1
 #cmakedefine HAVE_IPV6 1
 
