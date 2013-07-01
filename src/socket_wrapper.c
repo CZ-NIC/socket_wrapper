@@ -2050,9 +2050,11 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 
 	SWRAP_DLIST_ADD(sockets, child_si);
 
-	swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_SEND, NULL, 0);
-	swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_RECV, NULL, 0);
-	swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_ACK, NULL, 0);
+	if (addr != NULL) {
+		swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_SEND, NULL, 0);
+		swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_RECV, NULL, 0);
+		swrap_dump_packet(child_si, addr, SWRAP_ACCEPT_ACK, NULL, 0);
+	}
 
 	return fd;
 }
