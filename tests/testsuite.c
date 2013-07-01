@@ -58,15 +58,20 @@ static void test_socket_wrapper_dir(void **state)
 
 static void test_swrap_socket(void **state)
 {
+	int rc;
+
 	(void) state; /* unused */
 
-	assert_int_equal(socket(1337, 1337, 0), -1);
+	rc = socket(1337, 1337, 0);
+	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 
-	assert_int_equal(socket(AF_INET, 1337, 0), -1);
+	rc = socket(AF_INET, 1337, 0);
+	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EPROTONOSUPPORT);
 
-	assert_int_equal(socket(AF_INET, SOCK_DGRAM, 10), -1);
+	rc = socket(AF_INET, SOCK_DGRAM, 10);
+	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EPROTONOSUPPORT);
 }
 
