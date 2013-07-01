@@ -28,7 +28,7 @@ static void setup(void **state)
 
 static void teardown(void **state)
 {
-	char remove_cmd[256];
+	char remove_cmd[256] = {0};
 	const char *swrap_dir = getenv("SOCKET_WRAPPER_DIR");
 
 	(void) state; /* unused */
