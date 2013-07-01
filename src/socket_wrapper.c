@@ -87,52 +87,10 @@ enum swrap_dbglvl_e {
 #define DESTRUCTOR_ATTRIBUTE
 #endif
 
-static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
-
-static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
-{
-	char buffer[1024];
-	va_list va;
-	const char *d;
-	unsigned int lvl = 0;
-
-	d = getenv("SOCKET_WRAPPER_DEBUGLEVEL");
-	if (d != NULL) {
-		lvl = atoi(d);
-	}
-
-	va_start(va, format);
-	vsnprintf(buffer, sizeof(buffer), format, va);
-	va_end(va);
-
-	if (lvl >= dbglvl) {
-		switch (dbglvl) {
-			case SWRAP_LOG_ERROR:
-				fprintf(stderr,
-					"SWRAP_ERROR(%d): %s\n",
-					getpid(), buffer);
-				break;
-			case SWRAP_LOG_WARN:
-				fprintf(stderr,
-					"SWRAP_WARN(%d): %s\n",
-					getpid(), buffer);
-				break;
-			case SWRAP_LOG_DEBUG:
-				fprintf(stderr,
-					"SWRAP_DEBUG(%d): %s\n",
-					getpid(), buffer);
-				break;
-			case SWRAP_LOG_TRACE:
-				fprintf(stderr,
-					"SWRAP_TRACE(%d): %s\n",
-					getpid(), buffer);
-				break;
-		}
-	}
-
-}
-
-#define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __VA_ARGS__)
+#ifdef __GNUC__
+# define SWRAP_THREAD __thread
+#else
+# define SWRAP_THREAD
 #endif
 
 #ifndef MIN
@@ -214,7 +172,91 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
  * without changing the format above */
 #define MAX_WRAPPED_INTERFACES 40
 
+struct socket_info_fd {
+	struct socket_info_fd *prev, *next;
+	int fd;
+};
+
+struct socket_info
+{
+	struct socket_info_fd *fds;
+
+	int family;
+	int type;
+	int protocol;
+	int bound;
+	int bcast;
+	int is_server;
+	int connected;
+	int defer_connect;
+
+	char *tmp_path;
+
+	struct sockaddr *myname;
+	socklen_t myname_len;
+
+	struct sockaddr *peername;
+	socklen_t peername_len;
+
+	struct {
+		unsigned long pck_snd;
+		unsigned long pck_rcv;
+	} io;
+
+	struct socket_info *prev, *next;
+};
+
+static SWRAP_THREAD struct socket_info *sockets;
+
+/* Function prototypes */
+
 void swrap_destructor(void) DESTRUCTOR_ATTRIBUTE;
+
+static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
+#define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __VA_ARGS__)
+#endif
+
+static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
+{
+	char buffer[1024];
+	va_list va;
+	const char *d;
+	unsigned int lvl = 0;
+
+	d = getenv("SOCKET_WRAPPER_DEBUGLEVEL");
+	if (d != NULL) {
+		lvl = atoi(d);
+	}
+
+	va_start(va, format);
+	vsnprintf(buffer, sizeof(buffer), format, va);
+	va_end(va);
+
+	if (lvl >= dbglvl) {
+		switch (dbglvl) {
+			case SWRAP_LOG_ERROR:
+				fprintf(stderr,
+					"SWRAP_ERROR(%d): %s\n",
+					getpid(), buffer);
+				break;
+			case SWRAP_LOG_WARN:
+				fprintf(stderr,
+					"SWRAP_WARN(%d): %s\n",
+					getpid(), buffer);
+				break;
+			case SWRAP_LOG_DEBUG:
+				fprintf(stderr,
+					"SWRAP_DEBUG(%d): %s\n",
+					getpid(), buffer);
+				break;
+			case SWRAP_LOG_TRACE:
+				fprintf(stderr,
+					"SWRAP_TRACE(%d): %s\n",
+					getpid(), buffer);
+				break;
+		}
+	}
+}
 
 /*********************************************************
  * SWRAP LOADING LIBC FUNCTIONS
@@ -615,42 +657,6 @@ static size_t socket_length(int family)
 	}
 	return 0;
 }
-
-struct socket_info_fd {
-	struct socket_info_fd *prev, *next;
-	int fd;
-};
-
-struct socket_info
-{
-	struct socket_info_fd *fds;
-
-	int family;
-	int type;
-	int protocol;
-	int bound;
-	int bcast;
-	int is_server;
-	int connected;
-	int defer_connect;
-
-	char *tmp_path;
-
-	struct sockaddr *myname;
-	socklen_t myname_len;
-
-	struct sockaddr *peername;
-	socklen_t peername_len;
-
-	struct {
-		unsigned long pck_snd;
-		unsigned long pck_rcv;
-	} io;
-
-	struct socket_info *prev, *next;
-};
-
-static struct socket_info *sockets;
 
 static const char *socket_wrapper_dir(void)
 {
