@@ -207,6 +207,8 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
  */
 #define SOCKET_MAX_PACKET 1500
 
+#define SOCKET_MAX_SOCKETS 1024
+
 /* This limit is to avoid broadcast sendto() needing to stat too many
  * files.  It may be raised (with a performance cost) to up to 254
  * without changing the format above */
@@ -2144,7 +2146,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 		autobind_start = 10000;
 	}
 
-	for (i=0;i<1000;i++) {
+	for (i = 0; i < SOCKET_MAX_SOCKETS; i++) {
 		port = autobind_start + i;
 		snprintf(un_addr.sun_path, sizeof(un_addr.sun_path), 
 			 "%s/"SOCKET_FORMAT, socket_wrapper_dir(),
@@ -2160,7 +2162,13 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 		autobind_start = port + 1;
 		break;
 	}
-	if (i == 1000) {
+	if (i == SOCKET_MAX_SOCKETS) {
+		SWRAP_LOG(SWRAP_LOG_ERROR, "Too many open unix sockets (%u) for "
+					   "interface "SOCKET_FORMAT,
+					   SOCKET_MAX_SOCKETS,
+					   type,
+					   socket_wrapper_default_iface(),
+					   0);
 		errno = ENFILE;
 		return -1;
 	}
