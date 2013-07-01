@@ -1214,10 +1214,10 @@ static const char *socket_wrapper_pcap_file(void)
 {
 	static int initialized = 0;
 	static const char *s = NULL;
-	static const struct swrap_file_hdr h;
-	static const struct swrap_packet_frame f;
-	static const union swrap_packet_ip i;
-	static const union swrap_packet_payload p;
+	static const struct swrap_file_hdr h = {0};
+	static const struct swrap_packet_frame f = {0};
+	static const union swrap_packet_ip i = {{0}};
+	static const union swrap_packet_payload p = {{0}};
 
 	if (initialized == 1) {
 		return s;
