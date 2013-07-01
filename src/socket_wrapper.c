@@ -2024,6 +2024,7 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 	if (ret == -1) {
 		free(child_fi);
 		free(child_si);
+		free(my_addr);
 		close(fd);
 		return ret;
 	}
