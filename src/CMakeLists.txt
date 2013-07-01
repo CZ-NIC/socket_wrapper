@@ -12,3 +12,12 @@ install(
   LIBRARY DESTINATION ${LIB_INSTALL_DIR}
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
+
+set_target_properties(
+  socket_wrapper
+    PROPERTIES
+      VERSION
+        ${LIBRARY_VERSION}
+      SOVERSION
+        ${LIBRARY_SOVERSION}
+)
