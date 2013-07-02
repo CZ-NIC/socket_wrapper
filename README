@@ -4,14 +4,16 @@ Socket wrapper library
 This library passes all socket communication over unix domain sockets if the
 environment variable SOCKET_WRAPPER_DIR is set.
 
-It need to be preloaded with LD_PRELOAD.
+To use socket_wrapper the following environment variables need to be set:
+LD_PRELOAD=libsocket_wrapper.so
+SOCKET_WRAPPER_DIR=/path/to/socket_dir
 
-Environment variables which could be set:
-
-SOCKET_WRAPPER_DIR
-    The directory to place all unix sockets.
+The following environment variables could be set:
 
 SOCKET_WRAPPER_DEFAULT_IFACE
+    The default interface to use if nothing has
+    been set trough the functions.
+    Set it to '11' for '127.0.0.11'.
 
 SOCKET_WRAPPER_PCAP_FILE
     If set then all traffic will be written to the
@@ -20,4 +22,8 @@ SOCKET_WRAPPER_PCAP_FILE
 SOCKET_WRAPPER_DEBUGLEVEL
    If you socket_wrapper with with debug symbols
    you can turn on logging by setting this to an
-   integer between 1 and 5.
+   integer between 1 and 3.
+   0 = ERROR
+   1 = WARNING
+   2 = DEBUG
+   3 = TRACE
