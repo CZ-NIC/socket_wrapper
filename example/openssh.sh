@@ -54,13 +54,13 @@ export SOCKET_WRAPPER_DEFAULT_IFACE=11
 
 echo
 echo "Starting SSHD with SOCKET_WRAPPER_DIR=${SSH_DIRECTORY}/swrap ..."
-LD_PRELOAD=libsocket_wrapper.so /usr/sbin/sshd -f ${SSH_DIRECTORY}/sshd_config -e 2> ${SSH_DIRECTORY}/sshd_log || cleanup_and_exit 1
+DYLD_INSERT_LIBRARIES=libsocket_wrapper.dylib LD_PRELOAD=libsocket_wrapper.so /usr/sbin/sshd -f ${SSH_DIRECTORY}/sshd_config -e 2> ${SSH_DIRECTORY}/sshd_log || cleanup_and_exit 1
 echo "done"
 
 echo
 echo "Connecting to the ${SERVER_ADDRESS} ssh server using ssh binary."
 echo "You can check the sshd log file at ${SSH_DIRECTORY}/sshd_log."
 echo "If you logout sshd will be stopped and the environment cleaned up."
-LD_PRELOAD=libsocket_wrapper.so ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${SERVER_ADDRESS}
+DYLD_INSERT_LIBRARIES=libsocket_wrapper.dylib LD_PRELOAD=libsocket_wrapper.so ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${SERVER_ADDRESS}
 
 cleanup_and_exit 0

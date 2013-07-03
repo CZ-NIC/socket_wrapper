@@ -8,6 +8,10 @@ To use socket_wrapper the following environment variables need to be set:
 LD_PRELOAD=libsocket_wrapper.so
 SOCKET_WRAPPER_DIR=/path/to/socket_dir
 
+On MacOSX it is:
+DYLD_INSERT_LIBRARIES=libsocket_wrapper.dylib
+SOCKET_WRAPPER_DIR=/path/to/socket_dir
+
 The following environment variables could be set:
 
 SOCKET_WRAPPER_DEFAULT_IFACE
