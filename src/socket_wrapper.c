@@ -87,7 +87,7 @@ enum swrap_dbglvl_e {
 #define DESTRUCTOR_ATTRIBUTE
 #endif
 
-#ifdef __GNUC__
+#ifdef HAVE_GCC_THREAD_LOCAL_STORAGE
 # define SWRAP_THREAD __thread
 #else
 # define SWRAP_THREAD

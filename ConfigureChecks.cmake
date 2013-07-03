@@ -144,6 +144,13 @@ int main(void) {
     return 0;
 }" HAVE_DESTRUCTOR_ATTRIBUTE)
 
+check_c_source_compiles("
+__thread int tls;
+
+int main(void) {
+    return 0;
+}" HAVE_GCC_THREAD_LOCAL_STORAGE)
+
 check_library_exists(dl dlopen "" HAVE_LIBDL)
 if (HAVE_LIBDL)
     find_library(DLFCN_LIBRARY dl)
