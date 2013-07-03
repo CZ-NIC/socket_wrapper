@@ -50,6 +50,7 @@
 #ifdef HAVE_SYS_FILIO_H
 #include <sys/filio.h>
 #endif
+#include <sys/uio.h>
 #include <errno.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -57,11 +58,11 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 enum swrap_dbglvl_e {
 	SWRAP_LOG_ERROR = 0,
