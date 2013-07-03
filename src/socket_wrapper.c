@@ -140,7 +140,7 @@ enum swrap_dbglvl_e {
 	(item)->next	= NULL; \
 } while (0)
 
-#ifdef HAVE_GETTIMEOFDAY_TZ
+#if defined(HAVE_GETTIMEOFDAY_TZ) || defined(HAVE_GETTIMEOFDAY_TZ_VOID)
 #define swrapGetTimeOfDay(tval) gettimeofday(tval,NULL)
 #else
 #define swrapGetTimeOfDay(tval)	gettimeofday(tval)

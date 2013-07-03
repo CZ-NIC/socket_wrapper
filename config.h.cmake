@@ -25,6 +25,7 @@
 /*************************** LIBRARIES ***************************/
 
 #cmakedefine HAVE_GETTIMEOFDAY_TZ 1
+#cmakedefine HAVE_GETTIMEOFDAY_TZ_VOID 1
 
 /**************************** OPTIONS ****************************/
 

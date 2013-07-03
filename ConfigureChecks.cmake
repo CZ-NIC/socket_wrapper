@@ -91,6 +91,12 @@ check_prototype_definition(gettimeofday
     "sys/time.h"
     HAVE_GETTIMEOFDAY_TZ)
 
+check_prototype_definition(gettimeofday
+    "int gettimeofday(struct timeval *tv, void *tzp)"
+    "-1"
+    "sys/time.h"
+    HAVE_GETTIMEOFDAY_TZ_VOID)
+
 # IPV6
 check_c_source_compiles("
     #include <stdlib.h>
