@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SSH_DIRECTORY=$(mktemp -d)
+SSH_DIRECTORY=$(mktemp -d /tmp/tmp.swrap.XXXXXXXX)
 SERVER_ADDRESS="127.0.0.10"
 mkdir ${SSH_DIRECTORY}/swrap
 
@@ -27,8 +27,8 @@ echo Generating ${SSH_DIRECTORY}/ssh_host_dsa_key.
 ssh-keygen -t dsa -f ${SSH_DIRECTORY}/ssh_host_dsa_key -N '' 2>/dev/null
 echo Generating ${SSH_DIRECTORY}/ssh_host_rsa_key.
 ssh-keygen -t rsa -b 2048 -f ${SSH_DIRECTORY}/ssh_host_rsa_key -N '' 2>/dev/null
-echo Generating ${SSH_DIRECTORY}/ssh_host_ecdsa_key.
-ssh-keygen -t ecdsa -b 256 -f ${SSH_DIRECTORY}/ssh_host_ecdsa_key -N '' 2>/dev/null
+#echo Generating ${SSH_DIRECTORY}/ssh_host_ecdsa_key.
+#ssh-keygen -t ecdsa -b 256 -f ${SSH_DIRECTORY}/ssh_host_ecdsa_key -N '' 2>/dev/null
 
 # Create sshd_config file
 cat > ${SSH_DIRECTORY}/sshd_config << EOT
@@ -37,7 +37,7 @@ ListenAddress ${SERVER_ADDRESS}
 HostKey ${SSH_DIRECTORY}/ssh_host_key
 HostKey ${SSH_DIRECTORY}/ssh_host_rsa_key
 HostKey ${SSH_DIRECTORY}/ssh_host_dsa_key
-HostKey ${SSH_DIRECTORY}/ssh_host_ecdsa_key
+#HostKey ${SSH_DIRECTORY}/ssh_host_ecdsa_key
 Subsystem sftp /usr/lib/ssh/sftp-server
 
 LogLevel DEBUG1
