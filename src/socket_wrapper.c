@@ -282,11 +282,17 @@ static int libc_dlopen(void)
 		return 0;
 	}
 
+
 	for (libc_hnd = NULL, i = 10; libc_hnd == NULL; i--) {
 		char soname[256] = {0};
 
 		snprintf(soname, sizeof(soname), "%s.%u", LIBC_NAME, i);
 		libc_hnd = dlopen(soname, flags);
+	}
+
+	/* Maybe we're on MacOSX */
+	if (libc_hnd == NULL) {
+		libc_hnd = dlopen("libc.dylib", flags);
 	}
 
 	if (libc_hnd == NULL) {
