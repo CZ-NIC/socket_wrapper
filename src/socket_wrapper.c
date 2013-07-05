@@ -71,10 +71,6 @@ enum swrap_dbglvl_e {
 	SWRAP_LOG_TRACE
 };
 
-#ifdef NDEBUG
-#define SWRAP_LOG(dbglvl, ...)
-#else
-
 /* GCC have printf type attribute check. */
 #ifdef __GNUC__
 #define PRINTF_ATTRIBUTE(a,b) __attribute__ ((__format__ (__printf__, a, b)))
@@ -213,9 +209,12 @@ static SWRAP_THREAD struct socket_info *sockets;
 
 void swrap_destructor(void) DESTRUCTOR_ATTRIBUTE;
 
+#ifdef NDEBUG
+# define SWRAP_LOG(...)
+#else
+
 static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
-#define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __VA_ARGS__)
-#endif
+# define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __VA_ARGS__)
 
 static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
 {
@@ -258,6 +257,7 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
 		}
 	}
 }
+#endif
 
 /*********************************************************
  * SWRAP LOADING LIBC FUNCTIONS
