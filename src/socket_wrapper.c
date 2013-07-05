@@ -282,18 +282,18 @@ static int libc_dlopen(void)
 		return 0;
 	}
 
-
+#ifdef HAVE_APPLE
+	if (libc_hnd == NULL) {
+		libc_hnd = dlopen("libc.dylib", flags);
+	}
+#else
 	for (libc_hnd = NULL, i = 10; libc_hnd == NULL; i--) {
 		char soname[256] = {0};
 
 		snprintf(soname, sizeof(soname), "%s.%u", LIBC_NAME, i);
 		libc_hnd = dlopen(soname, flags);
 	}
-
-	/* Maybe we're on MacOSX */
-	if (libc_hnd == NULL) {
-		libc_hnd = dlopen("libc.dylib", flags);
-	}
+#endif
 
 	if (libc_hnd == NULL) {
 		SWRAP_LOG(SWRAP_LOG_ERROR,
@@ -308,10 +308,17 @@ static int libc_dlopen(void)
 static void *libc_dlsym(const char *name)
 {
 	void *func;
+	char sym_name[256];
 
 	libc_dlopen();
 
-	func = dlsym(libc_hnd, name);
+#ifdef HAVE_APPLE
+	snprintf(sym_name, sizeof(sym_name), "_%s", name);
+#else
+	snprintf(sym_name, sizeof(sym_name), "%s", name);
+#endif
+
+	func = dlsym(libc_hnd, sym_name);
 
 	if (func == NULL) {
 		SWRAP_LOG(SWRAP_LOG_ERROR,
