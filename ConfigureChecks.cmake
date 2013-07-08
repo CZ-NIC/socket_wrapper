@@ -167,6 +167,10 @@ if (OSX)
     set(HAVE_APPLE 1)
 endif (OSX)
 
+if (BSD)
+    add_definitions(-D_XOPEN_SOURCE=1 -D_XOPEN_SOURCE_EXTENDED=1)
+endif (BSD)
+
 # ENDIAN
 if (NOT WIN32)
     test_big_endian(WORDS_BIGENDIAN)
