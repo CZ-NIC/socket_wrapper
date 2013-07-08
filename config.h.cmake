@@ -21,11 +21,14 @@
 
 /* Define to 1 if you have the `getaddrinfo' function. */
 #cmakedefine HAVE_GETADDRINFO 1
+#cmakedefine HAVE_ACCEPT_PSOCKLEN_T 1
+#cmakedefine HAVE_IOCTL_INT 1
 
 /*************************** LIBRARIES ***************************/
 
 #cmakedefine HAVE_GETTIMEOFDAY_TZ 1
 #cmakedefine HAVE_GETTIMEOFDAY_TZ_VOID 1
+
 
 /**************************** OPTIONS ****************************/
 

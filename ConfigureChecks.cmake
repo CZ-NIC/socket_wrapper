@@ -97,6 +97,18 @@ check_prototype_definition(gettimeofday
     "sys/time.h"
     HAVE_GETTIMEOFDAY_TZ_VOID)
 
+check_prototype_definition(accept
+    "int accept(int s, struct sockaddr *addr, Psocklen_t addrlen)"
+    "-1"
+    "sys/types.h;sys/socket.h"
+    HAVE_ACCEPT_PSOCKLEN_T)
+
+check_prototype_definition(ioctl
+    "int accept(int s, int r, ...)"
+    "-1"
+    "unistd.h"
+    HAVE_IOCTL_INT)
+
 # IPV6
 check_c_source_compiles("
     #include <stdlib.h>
@@ -166,10 +178,6 @@ endif (HAVE_LIBDL)
 if (OSX)
     set(HAVE_APPLE 1)
 endif (OSX)
-
-if (SOLARIS)
-    add_definitions(-D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED=1)
-endif (SOLARIS)
 
 # ENDIAN
 if (NOT WIN32)

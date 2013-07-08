@@ -2073,9 +2073,13 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 	return fd;
 }
 
+#ifdef HAVE_ACCEPT_PSOCKLEN_T
+int accept(int s, struct sockaddr *addr, Psocklen_t addrlen)
+#else
 int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
+#endif
 {
-	return swrap_accept(s, addr, addrlen);
+	return swrap_accept(s, addr, (socklen_t *)addrlen);
 }
 
 static int autobind_start_init;
@@ -2364,9 +2368,13 @@ static int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
+#ifdef HAVE_ACCEPT_PSOCKLEN_T
+int getpeername(int s, struct sockaddr *name, Psocklen_t addrlen)
+#else
 int getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
+#endif
 {
-	return swrap_getpeername(s, name, addrlen);
+	return swrap_getpeername(s, name, (socklen_t *)addrlen);
 }
 
 /****************************************************************************
@@ -2387,9 +2395,13 @@ static int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 	return 0;
 }
 
+#ifdef HAVE_ACCEPT_PSOCKLEN_T
+int getsockname(int s, struct sockaddr *name, Psocklen_t addrlen)
+#else
 int getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
+#endif
 {
-	return swrap_getsockname(s, name, addrlen);
+	return swrap_getsockname(s, name, (socklen_t *)addrlen);
 }
 
 /****************************************************************************
@@ -2413,9 +2425,13 @@ static int swrap_getsockopt(int s, int level, int optname,
 	return -1;
 }
 
+#ifdef HAVE_ACCEPT_PSOCKLEN_T
+int getsockopt(int s, int level, int optname, void *optval, Psocklen_t optlen)
+#else
 int getsockopt(int s, int level, int optname, void *optval, socklen_t *optlen)
+#endif
 {
-	return swrap_getsockopt(s, level, optname, optval, optlen);
+	return swrap_getsockopt(s, level, optname, optval, (socklen_t *)optlen);
 }
 
 /****************************************************************************
@@ -2490,14 +2506,18 @@ static int swrap_vioctl(int s, unsigned long int r, va_list va)
 	return rc;
 }
 
+#ifdef HAVE_IOCTL_INT
+int ioctl(int s, int r, ...)
+#else
 int ioctl(int s, unsigned long int r, ...)
+#endif
 {
 	va_list va;
 	int rc;
 
 	va_start(va, r);
 
-	rc = swrap_vioctl(s, r, va);
+	rc = swrap_vioctl(s, (unsigned long int) r, va);
 
 	va_end(va);
 
@@ -2734,10 +2754,15 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 	return ret;
 }
 
+#ifdef HAVE_ACCEPT_PSOCKLEN_T
+ssize_t recvfrom(int s, void *buf, size_t len, int flags,
+		 struct sockaddr *from, Psocklen_t fromlen)
+#else
 ssize_t recvfrom(int s, void *buf, size_t len, int flags,
 		 struct sockaddr *from, socklen_t *fromlen)
+#endif
 {
-	return swrap_recvfrom(s, buf, len, flags, from, fromlen);
+	return swrap_recvfrom(s, buf, len, flags, from, (socklen_t *)fromlen);
 }
 
 /****************************************************************************
