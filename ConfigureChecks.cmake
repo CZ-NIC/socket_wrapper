@@ -79,7 +79,7 @@ if (UNIX)
     check_function_exists(getaddrinfo HAVE_GETADDRINFO)
 endif (UNIX)
 
-set(LIBSSH_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} CACHE INTERNAL "libssh required system libraries")
+set(SWRAP_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} CACHE INTERNAL "socket_wrapper required system libraries")
 
 # STRUCT MEMBERS
 check_struct_has_member("struct sockaddr" sa_len "sys/socket.h netinet/in.h" HAVE_STRUCT_SOCKADDR_SA_LEN)

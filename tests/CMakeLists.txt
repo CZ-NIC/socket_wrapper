@@ -6,7 +6,7 @@ include_directories(
   ${CMOCKA_INCLUDE_DIR}
 )
 
-add_cmocka_test(testsuite testsuite.c ${CMOCKA_LIBRARY})
+add_cmocka_test(testsuite testsuite.c ${CMOCKA_LIBRARY} ${SWRAP_REQUIRED_LIBRARIES})
 set_property(
     TEST
         testsuite
