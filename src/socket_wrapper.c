@@ -1913,7 +1913,8 @@ static int swrap_socket(int family, int type, int protocol)
 
 	if (fd == -1) return -1;
 
-	si = (struct socket_info *)calloc(1, sizeof(struct socket_info));
+	si = (struct socket_info *)malloc(sizeof(struct socket_info));
+	memset(si, 0, sizeof(struct socket_info));
 	if (si == NULL) {
 		errno = ENOMEM;
 		return -1;
@@ -2004,7 +2005,7 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 	}
 
 	child_si = (struct socket_info *)malloc(sizeof(struct socket_info));
-	memset(child_si, 0, sizeof(*child_si));
+	memset(child_si, 0, sizeof(struct socket_info));
 
 	child_fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
 	if (child_fi == NULL) {
