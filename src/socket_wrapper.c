@@ -203,7 +203,11 @@ struct socket_info
 	struct socket_info *prev, *next;
 };
 
-static SWRAP_THREAD struct socket_info *sockets;
+/*
+ * File descriptors are shared between threads so we should share socket
+ * information too.
+ */
+struct socket_info *sockets;
 
 /* Function prototypes */
 
