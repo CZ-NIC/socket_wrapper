@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 static void setup(void **state)
@@ -31,6 +32,7 @@ static void teardown(void **state)
 {
 	char remove_cmd[256] = {0};
 	const char *swrap_dir = getenv("SOCKET_WRAPPER_DIR");
+	int rc;
 
 	(void) state; /* unused */
 
@@ -38,7 +40,10 @@ static void teardown(void **state)
 		snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", swrap_dir);
 	}
 
-	system(remove_cmd);
+	rc = system(remove_cmd);
+	if (rc < 0) {
+		fprintf(stderr, "%s failed: %s", remove_cmd, strerror(errno));
+	}
 }
 
 #if 0
