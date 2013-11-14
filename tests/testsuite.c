@@ -84,6 +84,8 @@ static void test_swrap_ioctl_tty(void **state)
 
 	(void) state; /* unused */
 
+	memset(&ws, 0, sizeof(struct winsize));
+
 	rc = ioctl(0, TIOCGWINSZ, &ws);
 	assert_int_equal(rc, 0);
 
