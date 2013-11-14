@@ -5,6 +5,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 
 #include <errno.h>
 #include <stdlib.h>
@@ -62,6 +63,20 @@ static void test_socket_wrapper_dir(void **state)
 }
 #endif
 
+static void test_swrap_ioctl(void **state)
+{
+	int fd;
+	int rc;
+
+	(void) state; /* unused */
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	assert_int_not_equal(fd, -1);
+
+	rc = ioctl(fd, FIONBIO);
+	assert_int_equal(rc, 0);
+}
+
 static void test_swrap_socket(void **state)
 {
 	int rc;
@@ -102,6 +117,7 @@ int main(void) {
 
 	const UnitTest tests[] = {
 		unit_test_setup_teardown(test_swrap_socket, setup, teardown),
+		unit_test_setup_teardown(test_swrap_ioctl, setup, teardown),
 	};
 
 	rc = run_tests(tests);
