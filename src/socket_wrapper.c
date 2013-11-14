@@ -309,8 +309,6 @@ static void *libc_dlsym(const char *name)
 {
 	void *func;
 
-	libc_dlopen();
-
 #ifdef HAVE_APPLE
 	func = dlsym(RTLD_NEXT, name);
 #else
