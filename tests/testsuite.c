@@ -63,7 +63,7 @@ static void test_socket_wrapper_dir(void **state)
 }
 #endif
 
-static void test_swrap_ioctl(void **state)
+static void test_swrap_ioctl_sock(void **state)
 {
 	int fd;
 	int rc;
@@ -75,6 +75,20 @@ static void test_swrap_ioctl(void **state)
 
 	rc = ioctl(fd, FIONBIO);
 	assert_int_equal(rc, 0);
+}
+
+static void test_swrap_ioctl_tty(void **state)
+{
+	struct winsize ws;
+	int rc;
+
+	(void) state; /* unused */
+
+	rc = ioctl(0, TIOCGWINSZ, &ws);
+	assert_int_equal(rc, 0);
+
+	assert_true(ws.ws_col > 1);
+	assert_true(ws.ws_row > 1);
 }
 
 static void test_swrap_socket(void **state)
@@ -117,7 +131,8 @@ int main(void) {
 
 	const UnitTest tests[] = {
 		unit_test_setup_teardown(test_swrap_socket, setup, teardown),
-		unit_test_setup_teardown(test_swrap_ioctl, setup, teardown),
+		unit_test_setup_teardown(test_swrap_ioctl_sock, setup, teardown),
+		unit_test_setup_teardown(test_swrap_ioctl_tty, setup, teardown),
 	};
 
 	rc = run_tests(tests);
