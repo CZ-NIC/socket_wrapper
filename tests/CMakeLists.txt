@@ -7,11 +7,19 @@ include_directories(
 )
 
 add_cmocka_test(testsuite testsuite.c ${CMOCKA_LIBRARY} ${SWRAP_REQUIRED_LIBRARIES})
+if (OSX)
+set_property(
+    TEST
+        testsuite
+    PROPERTY
+        ENVIRONMENT DYLD_FORCE_FLAT_NAMESPACE=1;DYLD_INSERT_LIBRARIES=${CMAKE_BINARY_DIR}/src/libsocket_wrapper.dylib)
+else ()
 set_property(
     TEST
         testsuite
     PROPERTY
         ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/src/libsocket_wrapper.so)
+endif()
 set_property(
     TEST
         testsuite
