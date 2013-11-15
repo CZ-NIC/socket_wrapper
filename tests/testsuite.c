@@ -67,6 +67,7 @@ static void test_swrap_ioctl_sock(void **state)
 {
 	int fd;
 	int rc;
+	int grp = -127;
 
 	(void) state; /* unused */
 
@@ -75,6 +76,13 @@ static void test_swrap_ioctl_sock(void **state)
 
 	rc = ioctl(fd, FIONBIO);
 	assert_int_equal(rc, 0);
+
+#ifdef SIOCGPGRP
+	rc = ioctl(fd, SIOCGPGRP, &grp);
+	assert_int_equal(rc, 0);
+
+	assert_int_not_equal(grp, -127);
+#endif
 }
 
 static void test_swrap_socket(void **state)
