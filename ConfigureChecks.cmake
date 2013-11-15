@@ -104,9 +104,9 @@ check_prototype_definition(accept
     HAVE_ACCEPT_PSOCKLEN_T)
 
 check_prototype_definition(ioctl
-    "int accept(int s, int r, ...)"
+    "int ioctl(int s, int r, ...)"
     "-1"
-    "unistd.h"
+    "sys/ioctl.h"
     HAVE_IOCTL_INT)
 
 # IPV6
