@@ -106,7 +106,7 @@ check_prototype_definition(accept
 check_prototype_definition(ioctl
     "int ioctl(int s, int r, ...)"
     "-1"
-    "sys/ioctl.h"
+    "unistd.h;sys/ioctl.h"
     HAVE_IOCTL_INT)
 
 # IPV6
