@@ -74,8 +74,10 @@ static void test_swrap_ioctl_sock(void **state)
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	assert_int_not_equal(fd, -1);
 
+#ifdef FIONBIO
 	rc = ioctl(fd, FIONBIO);
 	assert_int_equal(rc, 0);
+#endif
 
 #ifdef SIOCGPGRP
 	rc = ioctl(fd, SIOCGPGRP, &grp);
