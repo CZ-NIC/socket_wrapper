@@ -269,6 +269,67 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
 
 #include <dlfcn.h>
 
+struct swrap_libc_fns {
+	int (*libc_accept)(int sockfd,
+			   struct sockaddr *addr,
+			   socklen_t *addrlen);
+	int (*libc_bind)(int sockfd,
+			 const struct sockaddr *addr,
+			 socklen_t addrlen);
+	int (*libc_close)(int fd);
+	int (*libc_connect)(int sockfd,
+			    const struct sockaddr *addr,
+			    socklen_t addrlen);
+	int (*libc_dup)(int fd);
+	int (*libc_dup2)(int oldfd, int newfd);
+	int (*libc_getpeername)(int sockfd,
+				struct sockaddr *addr,
+				socklen_t *addrlen);
+	int (*libc_getsockname)(int sockfd,
+				struct sockaddr *addr,
+				socklen_t *addrlen);
+	int (*libc_getsockopt)(int sockfd,
+			       int level,
+			       int optname,
+			       void *optval,
+			       socklen_t *optlen);
+	int (*libc_ioctl)(int d, unsigned long int request, ...);
+	int (*libc_listen)(int sockfd, int backlog);
+	int (*libc_read)(int fd, void *buf, size_t count);
+	ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
+	int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
+	int (*libc_recvfrom)(int sockfd,
+			     void *buf,
+			     size_t len,
+			     int flags,
+			     struct sockaddr *src_addr,
+			     socklen_t *addrlen);
+	int (*libc_send)(int sockfd, const void *buf, size_t len, int flags);
+	int (*libc_sendmsg)(int sockfd, const struct msghdr *msg, int flags);
+	int (*libc_sendto)(int sockfd,
+			   const void *buf,
+			   size_t len,
+			   int flags,
+			   const  struct sockaddr *dst_addr,
+			   socklen_t addrlen);
+	int (*libc_setsockopt)(int sockfd,
+			       int level,
+			       int optname,
+			       const void *optval,
+			       socklen_t optlen);
+	int (*libc_socket)(int domain, int type, int protocol);
+	ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
+};
+
+struct swrap {
+	void *libc_handle;
+	void *libsocket_handle;
+
+	struct swrap_libc_fns fns;
+};
+
+static struct swrap swrap;
+
 #define LIBC_NAME "libc.so"
 
 #ifndef HAVE_APPLE
