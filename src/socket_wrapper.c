@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
-
-static ssize_t real_readv(int fd, const struct iovec *iov, int iovcnt)
-{
-	if (libc_readv == NULL) {
-		*(void **)(&libc_readv) = libc_dlsym("readv");
-	}
-
-	return libc_readv(fd, iov, iovcnt);
-}
-
 static int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
 
 static int real_recv(int sockfd, void *buf, size_t len, int flags)
@@ -3156,7 +3145,7 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 	struct iovec v;
 
 	if (!si) {
-		return real_readv(s, vector, count);
+		return swrap.fns.libc_readv(s, vector, count);
 	}
 
 	if (!si->connected) {
@@ -3184,7 +3173,7 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 		}
 	}
 
-	ret = real_readv(s, vector, count);
+	ret = swrap.fns.libc_readv(s, vector, count);
 	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
 		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
 	} else if (ret == 0) { /* END OF FILE */
