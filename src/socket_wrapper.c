@@ -561,25 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_setsockopt)(int sockfd,
-			      int level,
-			      int optname,
-			      const void *optval,
-			      socklen_t optlen);
-
-static int real_setsockopt(int sockfd,
-			   int level,
-			   int optname,
-			   const void *optval,
-			   socklen_t optlen)
-{
-	if (libc_setsockopt == NULL) {
-		*(void **)(&libc_setsockopt) = libc_dlsym("setsockopt");
-	}
-
-	return libc_setsockopt(sockfd, level, optname, optval, optlen);
-}
-
 static int (*libc_socket)(int domain, int type, int protocol);
 
 static int real_socket(int domain, int type, int protocol)
@@ -2452,11 +2433,19 @@ static int swrap_setsockopt(int s, int level, int optname,
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_setsockopt(s, level, optname, optval, optlen);
+		return swrap.fns.libc_setsockopt(s,
+						 level,
+						 optname,
+						 optval,
+						 optlen);
 	}
 
 	if (level == SOL_SOCKET) {
-		return real_setsockopt(s, level, optname, optval, optlen);
+		return swrap.fns.libc_setsockopt(s,
+						 level,
+						 optname,
+						 optval,
+						 optlen);
 	}
 
 	switch (si->family) {
