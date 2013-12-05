@@ -541,21 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_getsockname)(int sockfd,
-			       struct sockaddr *addr,
-			       socklen_t *addrlen);
-
-static int real_getsockname(int sockfd,
-			    struct sockaddr *addr,
-			    socklen_t *addrlen)
-{
-	if (libc_getsockname == NULL) {
-		*(void **)(&libc_getsockname) = libc_dlsym("getsockname");
-	}
-
-	return libc_getsockname(sockfd, addr, addrlen);
-}
-
 static int (*libc_getsockopt)(int sockfd,
 			      int level,
 			      int optname,
@@ -2157,8 +2142,9 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 		*addrlen = len;
 	}
 
-	ret = real_getsockname(fd, (struct sockaddr *)(void *)&un_my_addr,
-			       &un_my_addrlen);
+	ret = swrap.fns.libc_getsockname(fd,
+					 (struct sockaddr *)(void *)&un_my_addr,
+					 &un_my_addrlen);
 	if (ret == -1) {
 		free(child_fi);
 		free(child_si);
@@ -2511,7 +2497,7 @@ static int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_getsockname(s, name, addrlen);
+		return swrap.fns.libc_getsockname(s, name, addrlen);
 	}
 
 	memcpy(name, si->myname, si->myname_len);
