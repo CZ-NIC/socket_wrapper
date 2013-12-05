@@ -6,6 +6,8 @@ include_directories(
   ${CMOCKA_INCLUDE_DIR}
 )
 
+add_executable(echo_srv echo_srv.c)
+
 add_cmocka_test(testsuite testsuite.c ${CMOCKA_LIBRARY} ${SWRAP_REQUIRED_LIBRARIES})
 if (OSX)
 set_property(
