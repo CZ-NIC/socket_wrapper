@@ -485,62 +485,6 @@ static int swrap_enabled(void)
 	return swrap.enabled ? 1 : 0;
 }
 
-#ifndef HAVE_APPLE
-static void *libc_hnd;
-
-static int libc_dlopen(void)
-{
-	unsigned int i;
-	int flags = RTLD_LAZY;
-
-#ifdef RTLD_DEEPBIND
-	flags |= RTLD_DEEPBIND;
-#endif
-
-	if (libc_hnd != NULL) {
-		return 0;
-	}
-
-	for (libc_hnd = NULL, i = 10; libc_hnd == NULL; i--) {
-		char soname[256] = {0};
-
-		snprintf(soname, sizeof(soname), "%s.%u", LIBC_NAME, i);
-		libc_hnd = dlopen(soname, flags);
-	}
-
-	if (libc_hnd == NULL) {
-		SWRAP_LOG(SWRAP_LOG_ERROR,
-			  "Failed to dlopen %s.%u: %s\n",
-			  LIBC_NAME, i, dlerror());
-		exit(-1);
-	}
-
-	return 0;
-}
-#endif
-
-static void *libc_dlsym(const char *name)
-{
-	void *func;
-
-#ifdef HAVE_APPLE
-	func = dlsym(RTLD_NEXT, name);
-#else
-	libc_dlopen();
-
-	func = dlsym(libc_hnd, name);
-#endif
-
-	if (func == NULL) {
-		SWRAP_LOG(SWRAP_LOG_ERROR,
-			  "Failed to find %s in %s: %s\n",
-			  name, LIBC_NAME, dlerror());
-		exit(-1);
-	}
-
-	return func;
-}
-
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
