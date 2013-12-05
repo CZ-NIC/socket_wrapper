@@ -541,22 +541,22 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_ioctl)(int d, unsigned long int request, ...);
-
-static int real_vioctl(int d, unsigned long int request, va_list ap) {
+static int libc_vioctl(int d, unsigned long int request, va_list ap)
+{
 	long int args[4];
 	int rc;
 	int i;
-
-	if (libc_ioctl == NULL) {
-		*(void **)(&libc_ioctl) = libc_dlsym("ioctl");
-	}
 
 	for (i = 0; i < 4; i++) {
 		args[i] = va_arg(ap, long int);
 	}
 
-	rc = libc_ioctl(d, request, args[0], args[1], args[2], args[3]);
+	rc = swrap.fns.libc_ioctl(d,
+				  request,
+				  args[0],
+				  args[1],
+				  args[2],
+				  args[3]);
 
 	return rc;
 }
@@ -2582,12 +2582,12 @@ static int swrap_vioctl(int s, unsigned long int r, va_list va)
 	int rc;
 
 	if (!si) {
-		return real_vioctl(s, r, va);
+		return libc_vioctl(s, r, va);
 	}
 
 	va_copy(ap, va);
 
-	rc = real_vioctl(s, r, va);
+	rc = libc_vioctl(s, r, va);
 
 	switch (r) {
 	case FIONREAD:
