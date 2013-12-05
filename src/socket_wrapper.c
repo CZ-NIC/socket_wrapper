@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_socket)(int domain, int type, int protocol);
-
-static int real_socket(int domain, int type, int protocol)
-{
-	if (libc_socket == NULL) {
-		*(void **)(&libc_socket) = libc_dlsym("socket");
-	}
-
-	return libc_socket(domain, type, protocol);
-}
-
 static ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
 
 static ssize_t real_writev(int fd, const struct iovec *iov, int iovcnt)
@@ -1847,7 +1836,7 @@ static int swrap_socket(int family, int type, int protocol)
 #endif
 		break;
 	case AF_UNIX:
-		return real_socket(family, type, protocol);
+		return swrap.fns.libc_socket(family, type, protocol);
 	default:
 		errno = EAFNOSUPPORT;
 		return -1;
@@ -1881,9 +1870,11 @@ static int swrap_socket(int family, int type, int protocol)
 		return -1;
 	}
 
-	/* We must call real_socket with type, from the caller, not the version we removed
-	   SOCK_CLOEXEC and SOCK_NONBLOCK from */
-	fd = real_socket(AF_UNIX, type, 0);
+	/*
+	 * We must call libc_socket with type, from the caller, not the version
+	 * we removed SOCK_CLOEXEC and SOCK_NONBLOCK from
+	 */
+	fd = swrap.fns.libc_socket(AF_UNIX, type, 0);
 
 	if (fd == -1) return -1;
 
