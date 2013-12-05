@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_listen)(int sockfd, int backlog);
-
-static int real_listen(int sockfd, int backlog)
-{
-	if (libc_listen == NULL) {
-		*(void **)(&libc_listen) = libc_dlsym("listen");
-	}
-
-	return libc_listen(sockfd, backlog);
-}
-
 static int (*libc_read)(int fd, void *buf, size_t count);
 
 static int real_read(int fd, void *buf, size_t count)
@@ -2423,10 +2412,10 @@ static int swrap_listen(int s, int backlog)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_listen(s, backlog);
+		return swrap.fns.libc_listen(s, backlog);
 	}
 
-	ret = real_listen(s, backlog);
+	ret = swrap.fns.libc_listen(s, backlog);
 
 	return ret;
 }
