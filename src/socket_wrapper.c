@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_read)(int fd, void *buf, size_t count);
-
-static int real_read(int fd, void *buf, size_t count)
-{
-	if (libc_read == NULL) {
-		*(void **)(&libc_read) = libc_dlsym("read");
-	}
-
-	return libc_read(fd, buf, count);
-}
-
 static ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
 
 static ssize_t real_readv(int fd, const struct iovec *iov, int iovcnt)
@@ -2976,14 +2965,14 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_read(s, buf, len);
+		return swrap.fns.libc_read(s, buf, len);
 	}
 
 	if (si->type == SOCK_STREAM) {
 		len = MIN(len, SOCKET_MAX_PACKET);
 	}
 
-	ret = real_read(s, buf, len);
+	ret = swrap.fns.libc_read(s, buf, len);
 	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
 		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
 	} else if (ret == 0) { /* END OF FILE */
