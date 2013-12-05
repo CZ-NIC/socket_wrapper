@@ -541,21 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_getpeername)(int sockfd,
-			       struct sockaddr *addr,
-			       socklen_t *addrlen);
-
-static int real_getpeername(int sockfd,
-			    struct sockaddr *addr,
-			    socklen_t *addrlen)
-{
-	if (libc_getpeername == NULL) {
-		*(void **)(&libc_getpeername) = libc_dlsym("getpeername");
-	}
-
-	return libc_getpeername(sockfd, addr, addrlen);
-}
-
 static int (*libc_getsockname)(int sockfd,
 			       struct sockaddr *addr,
 			       socklen_t *addrlen);
@@ -2493,7 +2478,7 @@ static int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_getpeername(s, name, addrlen);
+		return swrap.fns.libc_getpeername(s, name, addrlen);
 	}
 
 	if (!si->peername)
