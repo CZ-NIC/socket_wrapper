@@ -541,25 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_getsockopt)(int sockfd,
-			      int level,
-			      int optname,
-			      void *optval,
-			      socklen_t *optlen);
-
-static int real_getsockopt(int sockfd,
-			   int level,
-			   int optname,
-			   void *optval,
-			   socklen_t *optlen)
-{
-	if (libc_getsockopt == NULL) {
-		*(void **)(&libc_getsockopt) = libc_dlsym("getsockopt");
-	}
-
-	return libc_getsockopt(sockfd, level, optname, optval, optlen);
-}
-
 static int (*libc_ioctl)(int d, unsigned long int request, ...);
 
 static int real_vioctl(int d, unsigned long int request, va_list ap) {
@@ -2525,11 +2506,19 @@ static int swrap_getsockopt(int s, int level, int optname,
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_getsockopt(s, level, optname, optval, optlen);
+		return swrap.fns.libc_getsockopt(s,
+						 level,
+						 optname,
+						 optval,
+						 optlen);
 	}
 
 	if (level == SOL_SOCKET) {
-		return real_getsockopt(s, level, optname, optval, optlen);
+		return swrap.fns.libc_getsockopt(s,
+						 level,
+						 optname,
+						 optval,
+						 optlen);
 	}
 
 	errno = ENOPROTOOPT;
