@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_sendmsg)(int sockfd, const struct msghdr *msg, int flags);
-
-static int real_sendmsg(int sockfd, const struct msghdr *msg, int flags)
-{
-	if (libc_sendmsg == NULL) {
-		*(void **)(&libc_sendmsg) = libc_dlsym("sendmsg");
-	}
-
-	return libc_sendmsg(sockfd, msg, flags);
-}
-
 static int (*libc_sendto)(int sockfd, const void *buf, size_t len, int flags,
 			  const  struct sockaddr *dst_addr, socklen_t addrlen);
 
@@ -3022,7 +3011,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 	int bcast = 0;
 
 	if (!si) {
-		return real_sendmsg(s, omsg, flags);
+		return swrap.fns.libc_sendmsg(s, omsg, flags);
 	}
 
 	tmp.iov_base = NULL;
@@ -3087,7 +3076,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 			msg.msg_namelen = sizeof(un_addr); /* size of address */
 
 			/* ignore the any errors in broadcast sends */
-			real_sendmsg(s, &msg, flags);
+			swrap.fns.libc_sendmsg(s, &msg, flags);
 		}
 
 		swrap_dump_packet(si, to, SWRAP_SENDTO, buf, len);
@@ -3096,7 +3085,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 		return len;
 	}
 
-	ret = real_sendmsg(s, &msg, flags);
+	ret = swrap.fns.libc_sendmsg(s, &msg, flags);
 
 	swrap_sendmsg_after(si, &msg, to, ret);
 
