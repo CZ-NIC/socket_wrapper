@@ -38,6 +38,7 @@
 #cmakedefine HAVE_IPV6 1
 
 #cmakedefine HAVE_APPLE 1
+#cmakedefine HAVE_LIBSOCKET 1
 
 /*************************** ENDIAN *****************************/
 

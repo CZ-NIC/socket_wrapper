@@ -332,6 +332,127 @@ static struct swrap swrap;
 
 #define LIBC_NAME "libc.so"
 
+static void *swrap_libc_fn(void *handle, const char *fn_name)
+{
+	void *func;
+
+	if (handle == NULL) {
+		return NULL;
+	}
+
+	func = dlsym(handle, fn_name);
+	if (func == NULL) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Failed to find %s: %s\n",
+			  fn_name, dlerror());
+		exit(-1);
+	}
+
+	return func;
+}
+
+static void swrap_libc_init(void)
+{
+	int i;
+	int flags = RTLD_LAZY;
+	void *handle;
+
+#ifdef HAVE_APPLE
+	handle = RTLD_NEXT;
+#else /* !HAVE_APPLE */
+
+#ifdef RTLD_DEEPBIND
+	flags |= RTLD_DEEPBIND;
+#endif
+
+	/* Load libc.so */
+	for (swrap.libc_handle = NULL, i = 10; swrap.libc_handle == NULL && i >= 0; i--) {
+		char soname[256] = {0};
+
+		snprintf(soname, sizeof(soname), "%s.%d", LIBC_NAME, i);
+		swrap.libc_handle = dlopen(soname, flags);
+	}
+
+	if (swrap.libc_handle == NULL) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Failed to dlopen %s.%d: %s\n",
+			  LIBC_NAME, i, dlerror());
+		exit(-1);
+	}
+
+#ifdef HAVE_LIBSOCKET
+	for (swrap.libsocket_handle = NULL, i = 10; swrap.libsocket_handle == NULL && i >= 0; i--) {
+		char soname[256] = {0};
+                i = 1;
+
+		snprintf(soname, sizeof(soname), "libsocket.so.%d", i);
+		swrap.libsocket_handle = dlopen(soname, flags);
+	}
+
+	if (swrap.libsocket_handle == NULL) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			 "Failed to dlopen libsocket.so: %s",
+			 dlerror());
+		exit(-1);
+	}
+#endif /* HAVE_LIBSOCKET */
+
+#endif /* !HAVE_APPLE */
+
+	/* Load libc functions */
+#ifndef HAVE_APPLE
+	handle = swrap.libc_handle;
+#endif
+	*(void **) (&swrap.fns.libc_close) =
+		swrap_libc_fn(handle, "close");
+	*(void **) (&swrap.fns.libc_dup) =
+		swrap_libc_fn(handle, "dup");
+	*(void **) (&swrap.fns.libc_dup2) =
+		swrap_libc_fn(handle, "dup2");
+	*(void **) (&swrap.fns.libc_ioctl) =
+		swrap_libc_fn(handle, "ioctl");
+	*(void **) (&swrap.fns.libc_read) =
+		swrap_libc_fn(handle, "read");
+	*(void **) (&swrap.fns.libc_readv) =
+		swrap_libc_fn(handle, "readv");
+	*(void **) (&swrap.fns.libc_writev) =
+		swrap_libc_fn(handle, "writev");
+
+	/* Load libsocket funcitons */
+#if !defined(HAVE_APPLE) && defined(HAVE_LIBSOCKET)
+	handle = swrap.libsocket_handle;
+#endif
+
+	*(void **) (&swrap.fns.libc_accept) =
+		swrap_libc_fn(handle, "accept");
+	*(void **) (&swrap.fns.libc_bind) =
+		swrap_libc_fn(handle, "bind");
+	*(void **) (&swrap.fns.libc_connect) =
+		swrap_libc_fn(handle, "connect");
+	*(void **) (&swrap.fns.libc_getpeername) =
+		swrap_libc_fn(handle, "getpeername");
+	*(void **) (&swrap.fns.libc_getsockname) =
+		swrap_libc_fn(handle, "getsockname");
+	*(void **) (&swrap.fns.libc_getsockopt) =
+		swrap_libc_fn(handle, "getsockopt");
+	*(void **) (&swrap.fns.libc_listen) =
+		swrap_libc_fn(handle, "listen");
+	*(void **) (&swrap.fns.libc_recv) =
+		swrap_libc_fn(handle, "recv");
+	*(void **) (&swrap.fns.libc_recvfrom) =
+		swrap_libc_fn(handle, "recvfrom");
+	*(void **) (&swrap.fns.libc_send) =
+		swrap_libc_fn(handle, "send");
+	*(void **) (&swrap.fns.libc_sendmsg) =
+		swrap_libc_fn(handle, "sendmsg");
+	*(void **) (&swrap.fns.libc_sendto) =
+		swrap_libc_fn(handle, "sendto");
+	*(void **) (&swrap.fns.libc_setsockopt) =
+		swrap_libc_fn(handle, "setsockopt");
+	*(void **) (&swrap.fns.libc_socket) =
+		swrap_libc_fn(handle, "socket");
+}
+
 #ifndef HAVE_APPLE
 static void *libc_hnd;
 
