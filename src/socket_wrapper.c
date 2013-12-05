@@ -561,19 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_recvfrom)(int sockfd, void *buf, size_t len, int flags,
-			    struct sockaddr *src_addr, socklen_t *addrlen);
-
-static int real_recvfrom(int sockfd, void *buf, size_t len, int flags,
-			 struct sockaddr *src_addr, socklen_t *addrlen)
-{
-	if (libc_recvfrom == NULL) {
-		*(void **)(&libc_recvfrom) = libc_dlsym("recvfrom");
-	}
-
-	return libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
-}
-
 static int (*libc_send)(int sockfd, const void *buf, size_t len, int flags);
 
 static int real_send(int sockfd, const void *buf, size_t len, int flags)
@@ -2782,7 +2769,12 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 	socklen_t ss_len = sizeof(ss);
 
 	if (!si) {
-		return real_recvfrom(s, buf, len, flags, from, fromlen);
+		return swrap.fns.libc_recvfrom(s,
+					       buf,
+					       len,
+					       flags,
+					       from,
+					       fromlen);
 	}
 
 	if (!from) {
@@ -2796,8 +2788,12 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 
 	/* irix 6.4 forgets to null terminate the sun_path string :-( */
 	memset(&un_addr, 0, sizeof(un_addr));
-	ret = real_recvfrom(s, buf, len, flags,
-			    (struct sockaddr *)(void *)&un_addr, &un_addrlen);
+	ret = swrap.fns.libc_recvfrom(s,
+				      buf,
+				      len,
+				      flags,
+				      (struct sockaddr *)(void *)&un_addr,
+				      &un_addrlen);
 	if (ret == -1) 
 		return ret;
 
