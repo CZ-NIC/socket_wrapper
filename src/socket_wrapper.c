@@ -541,21 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_connect)(int sockfd,
-			   const struct sockaddr *addr,
-			   socklen_t addrlen);
-
-static int real_connect(int sockfd,
-			const struct sockaddr *addr,
-			socklen_t addrlen)
-{
-	if (libc_connect == NULL) {
-		*(void **)(&libc_connect) = libc_dlsym("connect");
-	}
-
-	return libc_connect(sockfd, addr, addrlen);
-}
-
 static int (*libc_dup)(int fd);
 
 static int real_dup(int fd)
@@ -2033,8 +2018,8 @@ static int swrap_socket(int family, int type, int protocol)
 	real_type &= ~SOCK_NONBLOCK;
 #endif
 
-	if (!socket_wrapper_dir()) {
-		return real_socket(family, type, protocol);
+	if (!swrap_enabled()) {
+		return swrap.fns.libc_socket(family, type, protocol);
 	}
 
 	switch (family) {
@@ -2395,7 +2380,7 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 	int bcast = 0;
 
 	if (!si) {
-		return real_connect(s, serv_addr, addrlen);
+		return swrap.fns.libc_connect(s, serv_addr, addrlen);
 	}
 
 	if (si->bound == 0) {
@@ -2423,8 +2408,9 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 	} else {
 		swrap_dump_packet(si, serv_addr, SWRAP_CONNECT_SEND, NULL, 0);
 
-		ret = real_connect(s, (struct sockaddr *)(void *)&un_addr,
-				   sizeof(struct sockaddr_un));
+		ret = swrap.fns.libc_connect(s,
+					     (struct sockaddr *)(void *)&un_addr,
+					     sizeof(struct sockaddr_un));
 	}
 
 	SWRAP_LOG(SWRAP_LOG_TRACE,
@@ -2792,8 +2778,9 @@ static ssize_t swrap_sendmsg_before(int fd,
 					     tmp_un, 0, NULL);
 		if (ret == -1) return -1;
 
-		ret = real_connect(fd, (struct sockaddr *)(void *)tmp_un,
-				   sizeof(*tmp_un));
+		ret = swrap.fns.libc_connect(fd,
+					     (struct sockaddr *)(void *)tmp_un,
+					     sizeof(*tmp_un));
 
 		/* to give better errors */
 		if (ret == -1 && errno == ENOENT) {
