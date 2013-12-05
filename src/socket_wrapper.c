@@ -62,6 +62,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 enum swrap_dbglvl_e {
@@ -325,10 +326,18 @@ struct swrap {
 	void *libc_handle;
 	void *libsocket_handle;
 
+	bool initialised;
+	bool enabled;
+
+	char *socket_dir;
+
 	struct swrap_libc_fns fns;
 };
 
 static struct swrap swrap;
+
+/* prototypes */
+static const char *socket_wrapper_dir(void);
 
 #define LIBC_NAME "libc.so"
 
@@ -451,6 +460,29 @@ static void swrap_libc_init(void)
 		swrap_libc_fn(handle, "setsockopt");
 	*(void **) (&swrap.fns.libc_socket) =
 		swrap_libc_fn(handle, "socket");
+}
+
+static void swrap_init(void)
+{
+	if (swrap.initialised) {
+		return;
+	}
+
+	swrap.socket_dir = strdup(socket_wrapper_dir());
+	if (swrap.socket_dir != NULL) {
+		swrap.enabled = true;
+	}
+
+	swrap_libc_init();
+
+	swrap.initialised = true;
+}
+
+static int swrap_enabled(void)
+{
+	swrap_init();
+
+	return swrap.enabled ? 1 : 0;
 }
 
 #ifndef HAVE_APPLE
