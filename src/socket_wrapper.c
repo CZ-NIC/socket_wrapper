@@ -541,17 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_close)(int fd);
-
-static int real_close(int fd)
-{
-	if (libc_close == NULL) {
-		*(void **)(&libc_close) = libc_dlsym("close");
-	}
-
-	return libc_close(fd);
-}
-
 static int (*libc_connect)(int sockfd,
 			   const struct sockaddr *addr,
 			   socklen_t addrlen);
@@ -3388,7 +3377,7 @@ static int swrap_close(int fd)
 	int ret;
 
 	if (!si) {
-		return real_close(fd);
+		return swrap.fns.libc_close(fd);
 	}
 
 	for (fi = si->fds; fi; fi = fi->next) {
@@ -3401,7 +3390,7 @@ static int swrap_close(int fd)
 
 	if (si->fds) {
 		/* there are still references left */
-		return real_close(fd);
+		return swrap.fns.libc_close(fd);
 	}
 
 	SWRAP_DLIST_REMOVE(sockets, si);
@@ -3410,7 +3399,7 @@ static int swrap_close(int fd)
 		swrap_dump_packet(si, NULL, SWRAP_CLOSE_SEND, NULL, 0);
 	}
 
-	ret = real_close(fd);
+	ret = swrap.fns.libc_close(fd);
 
 	if (si->myname && si->peername) {
 		swrap_dump_packet(si, NULL, SWRAP_CLOSE_RECV, NULL, 0);
