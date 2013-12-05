@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
-
-static ssize_t real_writev(int fd, const struct iovec *iov, int iovcnt)
-{
-	if (libc_writev == NULL) {
-		*(void **)(&libc_writev) = libc_dlsym("writev");
-	}
-
-	return libc_writev(fd, iov, iovcnt);
-}
-
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -3163,7 +3152,7 @@ static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_writev(s, vector, count);
+		return swrap.fns.libc_writev(s, vector, count);
 	}
 
 	tmp.iov_base = NULL;
@@ -3183,7 +3172,7 @@ static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, NULL, NULL, NULL);
 	if (ret == -1) return -1;
 
-	ret = real_writev(s, msg.msg_iov, msg.msg_iovlen);
+	ret = swrap.fns.libc_writev(s, msg.msg_iov, msg.msg_iovlen);
 
 	swrap_sendmsg_after(si, &msg, NULL, ret);
 
