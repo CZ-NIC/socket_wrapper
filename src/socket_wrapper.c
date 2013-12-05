@@ -541,21 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_accept)(int sockfd,
-			  struct sockaddr *addr,
-			  socklen_t *addrlen);
-
-static int real_accept(int sockfd,
-		       struct sockaddr *addr,
-		       socklen_t *addrlen)
-{
-	if (libc_accept == NULL) {
-		*(void **)(&libc_accept) = libc_dlsym("accept");
-	}
-
-	return libc_accept(sockfd, addr, addrlen);
-}
-
 static int (*libc_bind)(int sockfd,
 			const struct sockaddr *addr,
 			socklen_t addrlen);
@@ -1222,6 +1207,11 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 static struct socket_info *find_socket_info(int fd)
 {
 	struct socket_info *i;
+
+	if (!swrap_enabled()) {
+		return NULL;
+	}
+
 	for (i = sockets; i; i = i->next) {
 		struct socket_info_fd *f;
 		for (f = i->fds; f; f = f->next) {
@@ -2173,7 +2163,7 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 
 	parent_si = find_socket_info(s);
 	if (!parent_si) {
-		return real_accept(s, addr, addrlen);
+		return swrap.fns.libc_accept(s, addr, addrlen);
 	}
 
 	/* 
@@ -2194,7 +2184,7 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 	memset(&un_addr, 0, sizeof(un_addr));
 	memset(&un_my_addr, 0, sizeof(un_my_addr));
 
-	ret = real_accept(s, (struct sockaddr *)(void *)&un_addr, &un_addrlen);
+	ret = swrap.fns.libc_accept(s, (struct sockaddr *)(void *)&un_addr, &un_addrlen);
 	if (ret == -1) {
 		free(my_addr);
 		return ret;
