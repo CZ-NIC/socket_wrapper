@@ -541,17 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_dup2)(int oldfd, int newfd);
-
-static int real_dup2(int oldfd, int newfd)
-{
-	if (libc_dup2 == NULL) {
-		*(void **)(&libc_dup2) = libc_dlsym("dup2");
-	}
-
-	return libc_dup2(oldfd, newfd);
-}
-
 static int (*libc_getpeername)(int sockfd,
 			       struct sockaddr *addr,
 			       socklen_t *addrlen);
@@ -3448,7 +3437,7 @@ static int swrap_dup2(int fd, int newfd)
 	si = find_socket_info(fd);
 
 	if (!si) {
-		return real_dup2(fd, newfd);
+		return swrap.fns.libc_dup2(fd, newfd);
 	}
 
 	if (find_socket_info(newfd)) {
@@ -3463,7 +3452,7 @@ static int swrap_dup2(int fd, int newfd)
 		return -1;
 	}
 
-	fi->fd = real_dup2(fd, newfd);
+	fi->fd = swrap.fns.libc_dup2(fd, newfd);
 	if (fi->fd == -1) {
 		int saved_errno = errno;
 		free(fi);
