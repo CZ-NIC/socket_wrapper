@@ -541,21 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_bind)(int sockfd,
-			const struct sockaddr *addr,
-			socklen_t addrlen);
-
-static int real_bind(int sockfd,
-		     const struct sockaddr *addr,
-		     socklen_t addrlen)
-{
-	if (libc_bind == NULL) {
-		*(void **)(&libc_bind) = libc_dlsym("bind");
-	}
-
-	return libc_bind(sockfd, addr, addrlen);
-}
-
 static int (*libc_close)(int fd);
 
 static int real_close(int fd)
@@ -2382,7 +2367,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 			 type, socket_wrapper_default_iface(), port);
 		if (stat(un_addr.sun_path, &st) == 0) continue;
 
-		ret = real_bind(fd, (struct sockaddr *)(void *)&un_addr,
+		ret = swrap.fns.libc_bind(fd, (struct sockaddr *)(void *)&un_addr,
 				sizeof(un_addr));
 		if (ret == -1) return ret;
 
@@ -2493,7 +2478,7 @@ static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_bind(s, myaddr, addrlen);
+		return swrap.fns.libc_bind(s, myaddr, addrlen);
 	}
 
 	si->myname_len = addrlen;
@@ -2504,7 +2489,7 @@ static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 
 	unlink(un_addr.sun_path);
 
-	ret = real_bind(s, (struct sockaddr *)(void *)&un_addr,
+	ret = swrap.fns.libc_bind(s, (struct sockaddr *)(void *)&un_addr,
 			sizeof(struct sockaddr_un));
 
 	SWRAP_LOG(SWRAP_LOG_TRACE,
