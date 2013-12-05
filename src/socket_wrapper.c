@@ -561,19 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_sendto)(int sockfd, const void *buf, size_t len, int flags,
-			  const  struct sockaddr *dst_addr, socklen_t addrlen);
-
-static int real_sendto(int sockfd, const void *buf, size_t len, int flags,
-			 const struct sockaddr *dst_addr, socklen_t addrlen)
-{
-	if (libc_sendto == NULL) {
-		*(void **)(&libc_sendto) = libc_dlsym("sendto");
-	}
-
-	return libc_sendto(sockfd, buf, len, flags, dst_addr, addrlen);
-}
-
 static int (*libc_setsockopt)(int sockfd,
 			      int level,
 			      int optname,
@@ -2812,7 +2799,7 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 	int bcast = 0;
 
 	if (!si) {
-		return real_sendto(s, buf, len, flags, to, tolen);
+		return swrap.fns.libc_sendto(s, buf, len, flags, to, tolen);
 	}
 
 	tmp.iov_base = discard_const_p(char, buf);
@@ -2849,9 +2836,12 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 			if (stat(un_addr.sun_path, &st) != 0) continue;
 
 			/* ignore the any errors in broadcast sends */
-			real_sendto(s, buf, len, flags,
-				    (struct sockaddr *)(void *)&un_addr,
-				    sizeof(un_addr));
+			swrap.fns.libc_sendto(s,
+					      buf,
+					      len,
+					      flags,
+					      (struct sockaddr *)(void *)&un_addr,
+					      sizeof(un_addr));
 		}
 
 		swrap_dump_packet(si, to, SWRAP_SENDTO, buf, len);
@@ -2859,8 +2849,12 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 		return len;
 	}
 
-	ret = real_sendto(s, buf, len, flags, (struct sockaddr *)msg.msg_name,
-			  msg.msg_namelen);
+	ret = swrap.fns.libc_sendto(s,
+				    buf,
+				    len,
+				    flags,
+				    (struct sockaddr *)msg.msg_name,
+				    msg.msg_namelen);
 
 	swrap_sendmsg_after(si, &msg, to, ret);
 
