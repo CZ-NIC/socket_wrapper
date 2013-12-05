@@ -541,17 +541,6 @@ static void *libc_dlsym(const char *name)
 	return func;
 }
 
-static int (*libc_dup)(int fd);
-
-static int real_dup(int fd)
-{
-	if (libc_dup == NULL) {
-		*(void **)(&libc_dup) = libc_dlsym("dup");
-	}
-
-	return libc_dup(fd);
-}
-
 static int (*libc_dup2)(int oldfd, int newfd);
 
 static int real_dup2(int oldfd, int newfd)
@@ -3421,7 +3410,7 @@ static int swrap_dup(int fd)
 	si = find_socket_info(fd);
 
 	if (!si) {
-		return real_dup(fd);
+		return swrap.fns.libc_dup(fd);
 	}
 
 	fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
@@ -3430,7 +3419,7 @@ static int swrap_dup(int fd)
 		return -1;
 	}
 
-	fi->fd = real_dup(fd);
+	fi->fd = swrap.fns.libc_dup(fd);
 	if (fi->fd == -1) {
 		int saved_errno = errno;
 		free(fi);
