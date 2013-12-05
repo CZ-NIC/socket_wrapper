@@ -561,17 +561,6 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
-static int (*libc_send)(int sockfd, const void *buf, size_t len, int flags);
-
-static int real_send(int sockfd, const void *buf, size_t len, int flags)
-{
-	if (libc_send == NULL) {
-		*(void **)(&libc_send) = libc_dlsym("send");
-	}
-
-	return libc_send(sockfd, buf, len, flags);
-}
-
 static int (*libc_sendmsg)(int sockfd, const struct msghdr *msg, int flags);
 
 static int real_sendmsg(int sockfd, const struct msghdr *msg, int flags)
@@ -2976,7 +2965,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return real_send(s, buf, len, flags);
+		return swrap.fns.libc_send(s, buf, len, flags);
 	}
 
 	tmp.iov_base = discard_const_p(char, buf);
@@ -2999,7 +2988,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	buf = msg.msg_iov[0].iov_base;
 	len = msg.msg_iov[0].iov_len;
 
-	ret = real_send(s, buf, len, flags);
+	ret = swrap.fns.libc_send(s, buf, len, flags);
 
 	swrap_sendmsg_after(si, &msg, NULL, ret);
 
