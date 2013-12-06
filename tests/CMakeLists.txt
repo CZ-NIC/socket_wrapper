@@ -22,15 +22,3 @@ set_property(
     PROPERTY
         ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/src/libsocket_wrapper.so)
 endif()
-set_property(
-    TEST
-        testsuite
-    APPEND
-    PROPERTY
-        ENVIRONMENT SOCKET_WRAPPER_DIR=${CMAKE_CURRENT_BINARY_DIR})
-set_property(
-    TEST
-        testsuite
-    APPEND
-    PROPERTY
-        ENVIRONMENT SOCKET_WRAPPER_DEFAULT_IFACE="11")
