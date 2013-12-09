@@ -688,6 +688,13 @@ static int libc_listen(int sockfd, int backlog)
 	return swrap.fns.libc_listen(sockfd, backlog);
 }
 
+static int libc_read(int fd, void *buf, size_t count)
+{
+	swrap_load_lib_function(SWRAP_LIBC, read);
+
+	return swrap.fns.libc_read(fd, buf, count);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -3007,14 +3014,14 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_read(s, buf, len);
+		return libc_read(s, buf, len);
 	}
 
 	if (si->type == SOCK_STREAM) {
 		len = MIN(len, SOCKET_MAX_PACKET);
 	}
 
-	ret = swrap.fns.libc_read(s, buf, len);
+	ret = libc_read(s, buf, len);
 	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
 		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
 	} else if (ret == 0) { /* END OF FILE */
