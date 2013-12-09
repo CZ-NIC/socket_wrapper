@@ -591,6 +591,15 @@ static int libc_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 	return swrap.fns.libc_accept(sockfd, addr, addrlen);
 }
 
+static int libc_bind(int sockfd,
+		     const struct sockaddr *addr,
+		     socklen_t addrlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, bind);
+
+	return swrap.fns.libc_bind(sockfd, addr, addrlen);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -2190,7 +2199,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 			 type, socket_wrapper_default_iface(), port);
 		if (stat(un_addr.sun_path, &st) == 0) continue;
 
-		ret = swrap.fns.libc_bind(fd, (struct sockaddr *)(void *)&un_addr,
+		ret = libc_bind(fd, (struct sockaddr *)(void *)&un_addr,
 				sizeof(un_addr));
 		if (ret == -1) return ret;
 
@@ -2302,7 +2311,7 @@ static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_bind(s, myaddr, addrlen);
+		return libc_bind(s, myaddr, addrlen);
 	}
 
 	si->myname_len = addrlen;
@@ -2313,7 +2322,7 @@ static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 
 	unlink(un_addr.sun_path);
 
-	ret = swrap.fns.libc_bind(s, (struct sockaddr *)(void *)&un_addr,
+	ret = libc_bind(s, (struct sockaddr *)(void *)&un_addr,
 			sizeof(struct sockaddr_un));
 
 	SWRAP_LOG(SWRAP_LOG_TRACE,
