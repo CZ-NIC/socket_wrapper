@@ -607,6 +607,15 @@ static int libc_close(int fd)
 	return swrap.fns.libc_close(fd);
 }
 
+static int libc_connect(int sockfd,
+			const struct sockaddr *addr,
+			socklen_t addrlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, connect);
+
+	return swrap.fns.libc_connect(sockfd, addr, addrlen);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -2245,7 +2254,7 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 	int bcast = 0;
 
 	if (!si) {
-		return swrap.fns.libc_connect(s, serv_addr, addrlen);
+		return libc_connect(s, serv_addr, addrlen);
 	}
 
 	if (si->bound == 0) {
@@ -2273,9 +2282,9 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 	} else {
 		swrap_dump_packet(si, serv_addr, SWRAP_CONNECT_SEND, NULL, 0);
 
-		ret = swrap.fns.libc_connect(s,
-					     (struct sockaddr *)(void *)&un_addr,
-					     sizeof(struct sockaddr_un));
+		ret = libc_connect(s,
+				   (struct sockaddr *)(void *)&un_addr,
+				   sizeof(struct sockaddr_un));
 	}
 
 	SWRAP_LOG(SWRAP_LOG_TRACE,
@@ -2659,9 +2668,9 @@ static ssize_t swrap_sendmsg_before(int fd,
 					     tmp_un, 0, NULL);
 		if (ret == -1) return -1;
 
-		ret = swrap.fns.libc_connect(fd,
-					     (struct sockaddr *)(void *)tmp_un,
-					     sizeof(*tmp_un));
+		ret = libc_connect(fd,
+				   (struct sockaddr *)(void *)tmp_un,
+				   sizeof(*tmp_un));
 
 		/* to give better errors */
 		if (ret == -1 && errno == ENOENT) {
