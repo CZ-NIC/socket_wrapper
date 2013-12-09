@@ -341,6 +341,71 @@ static const char *socket_wrapper_dir(void);
 
 #define LIBC_NAME "libc.so"
 
+enum swrap_lib {
+    SWRAP_LIBC,
+    SWRAP_LIBNSL,
+    SWRAP_LIBSOCKET,
+};
+
+static void *swrap_load_lib_handle(enum swrap_lib lib)
+{
+	int flags = RTLD_LAZY;
+	void *handle = NULL;
+	int i;
+
+#ifdef HAVE_APPLE
+	return RTLD_NEXT;
+#endif
+
+#ifdef RTLD_DEEPBIND
+	flags |= RTLD_DEEPBIND;
+#endif
+
+	switch (lib) {
+	case SWRAP_LIBNSL:
+		/* FALL TROUGH */
+	case SWRAP_LIBSOCKET:
+#ifdef HAVE_LIBSOCKET
+		if (handle == NULL) {
+			for (handle = NULL, i = 10; handle == NULL && i >= 0; i--) {
+				char soname[256] = {0};
+
+				snprintf(soname, sizeof(soname), "libc.so.%d", i);
+				handle = dlopen(soname, flags);
+			}
+
+			swrap.libsocket_handle = handle;
+		} else {
+			handle = swrap.libsocket_handle;
+		}
+		break;
+#endif
+		/* FALL TROUGH */
+	case SWRAP_LIBC:
+		if (handle == NULL) {
+			for (handle = NULL, i = 10; handle == NULL && i >= 0; i--) {
+				char soname[256] = {0};
+
+				snprintf(soname, sizeof(soname), "libsocket.so.%d", i);
+				handle = dlopen(soname, flags);
+			}
+
+			swrap.libc_handle = handle;
+		} else {
+			handle = swrap.libc_handle;
+		}
+		break;
+	}
+
+	if (handle == NULL) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Failed to dlopen library: %s\n",
+			  dlerror());
+		exit(-1);
+	}
+
+	return handle;
+}
 static void *swrap_libc_fn(void *handle, const char *fn_name)
 {
 	void *func;
