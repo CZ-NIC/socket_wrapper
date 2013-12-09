@@ -576,6 +576,21 @@ static int swrap_enabled(void)
 	return swrap.enabled ? 1 : 0;
 }
 
+/*
+ * IMPORTANT
+ *
+ * Functions expeciall from libc need to be loaded individually, you can't load
+ * all at once or gdb will segfault at startup. The same applies to valgrind and
+ * has probably something todo with with the linker.
+ * So we need load each function at the point it is called the first time.
+ */
+static int libc_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, accept);
+
+	return swrap.fns.libc_accept(sockfd, addr, addrlen);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -1955,7 +1970,7 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 
 	parent_si = find_socket_info(s);
 	if (!parent_si) {
-		return swrap.fns.libc_accept(s, addr, addrlen);
+		return libc_accept(s, addr, addrlen);
 	}
 
 	/* 
@@ -1976,7 +1991,7 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 	memset(&un_addr, 0, sizeof(un_addr));
 	memset(&un_my_addr, 0, sizeof(un_my_addr));
 
-	ret = swrap.fns.libc_accept(s, (struct sockaddr *)(void *)&un_addr, &un_addrlen);
+	ret = libc_accept(s, (struct sockaddr *)(void *)&un_addr, &un_addrlen);
 	if (ret == -1) {
 		free(my_addr);
 		return ret;
