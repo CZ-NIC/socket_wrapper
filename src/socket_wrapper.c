@@ -630,6 +630,15 @@ static int libc_dup2(int oldfd, int newfd)
 	return swrap.fns.libc_dup2(oldfd, newfd);
 }
 
+static int libc_getpeername(int sockfd,
+			    struct sockaddr *addr,
+			    socklen_t *addrlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, getpeername);
+
+	return swrap.fns.libc_getpeername(sockfd, addr, addrlen);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -2403,7 +2412,7 @@ static int swrap_getpeername(int s, struct sockaddr *name, socklen_t *addrlen)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_getpeername(s, name, addrlen);
+		return libc_getpeername(s, name, addrlen);
 	}
 
 	if (!si->peername)
