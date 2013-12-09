@@ -639,6 +639,15 @@ static int libc_getpeername(int sockfd,
 	return swrap.fns.libc_getpeername(sockfd, addr, addrlen);
 }
 
+static int libc_getsockname(int sockfd,
+			    struct sockaddr *addr,
+			    socklen_t *addrlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, getsockname);
+
+	return swrap.fns.libc_getsockname(sockfd, addr, addrlen);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -2090,9 +2099,9 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 		*addrlen = len;
 	}
 
-	ret = swrap.fns.libc_getsockname(fd,
-					 (struct sockaddr *)(void *)&un_my_addr,
-					 &un_my_addrlen);
+	ret = libc_getsockname(fd,
+			       (struct sockaddr *)(void *)&un_my_addr,
+			       &un_my_addrlen);
 	if (ret == -1) {
 		free(child_fi);
 		free(child_si);
@@ -2445,7 +2454,7 @@ static int swrap_getsockname(int s, struct sockaddr *name, socklen_t *addrlen)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_getsockname(s, name, addrlen);
+		return libc_getsockname(s, name, addrlen);
 	}
 
 	memcpy(name, si->myname, si->myname_len);
