@@ -623,6 +623,13 @@ static int libc_dup(int fd)
 	return swrap.fns.libc_dup(fd);
 }
 
+static int libc_dup2(int oldfd, int newfd)
+{
+	swrap_load_lib_function(SWRAP_LIBC, dup2);
+
+	return swrap.fns.libc_dup2(oldfd, newfd);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -3372,7 +3379,7 @@ static int swrap_dup2(int fd, int newfd)
 	si = find_socket_info(fd);
 
 	if (!si) {
-		return swrap.fns.libc_dup2(fd, newfd);
+		return libc_dup2(fd, newfd);
 	}
 
 	if (find_socket_info(newfd)) {
@@ -3387,7 +3394,7 @@ static int swrap_dup2(int fd, int newfd)
 		return -1;
 	}
 
-	fi->fd = swrap.fns.libc_dup2(fd, newfd);
+	fi->fd = libc_dup2(fd, newfd);
 	if (fi->fd == -1) {
 		int saved_errno = errno;
 		free(fi);
