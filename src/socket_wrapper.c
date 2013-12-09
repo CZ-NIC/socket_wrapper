@@ -695,6 +695,13 @@ static int libc_read(int fd, void *buf, size_t count)
 	return swrap.fns.libc_read(fd, buf, count);
 }
 
+static ssize_t libc_readv(int fd, const struct iovec *iov, int iovcnt)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, readv);
+
+	return swrap.fns.libc_readv(fd, iov, iovcnt);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -3205,7 +3212,7 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 	struct iovec v;
 
 	if (!si) {
-		return swrap.fns.libc_readv(s, vector, count);
+		return libc_readv(s, vector, count);
 	}
 
 	if (!si->connected) {
@@ -3233,7 +3240,7 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 		}
 	}
 
-	ret = swrap.fns.libc_readv(s, vector, count);
+	ret = libc_readv(s, vector, count);
 	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
 		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
 	} else if (ret == 0) { /* END OF FILE */
