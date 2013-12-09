@@ -370,7 +370,7 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 			for (handle = NULL, i = 10; handle == NULL && i >= 0; i--) {
 				char soname[256] = {0};
 
-				snprintf(soname, sizeof(soname), "libc.so.%d", i);
+				snprintf(soname, sizeof(soname), "libsocket.so.%d", i);
 				handle = dlopen(soname, flags);
 			}
 
@@ -386,7 +386,7 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 			for (handle = NULL, i = 10; handle == NULL && i >= 0; i--) {
 				char soname[256] = {0};
 
-				snprintf(soname, sizeof(soname), "libsocket.so.%d", i);
+				snprintf(soname, sizeof(soname), "libc.so.%d", i);
 				handle = dlopen(soname, flags);
 			}
 
