@@ -600,6 +600,13 @@ static int libc_bind(int sockfd,
 	return swrap.fns.libc_bind(sockfd, addr, addrlen);
 }
 
+static int libc_close(int fd)
+{
+	swrap_load_lib_function(SWRAP_LIBC, close);
+
+	return swrap.fns.libc_close(fd);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -3254,7 +3261,7 @@ static int swrap_close(int fd)
 	int ret;
 
 	if (!si) {
-		return swrap.fns.libc_close(fd);
+		return libc_close(fd);
 	}
 
 	for (fi = si->fds; fi; fi = fi->next) {
@@ -3267,7 +3274,7 @@ static int swrap_close(int fd)
 
 	if (si->fds) {
 		/* there are still references left */
-		return swrap.fns.libc_close(fd);
+		return libc_close(fd);
 	}
 
 	SWRAP_DLIST_REMOVE(sockets, si);
@@ -3276,7 +3283,7 @@ static int swrap_close(int fd)
 		swrap_dump_packet(si, NULL, SWRAP_CLOSE_SEND, NULL, 0);
 	}
 
-	ret = swrap.fns.libc_close(fd);
+	ret = libc_close(fd);
 
 	if (si->myname && si->peername) {
 		swrap_dump_packet(si, NULL, SWRAP_CLOSE_RECV, NULL, 0);
