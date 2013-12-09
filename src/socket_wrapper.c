@@ -648,6 +648,17 @@ static int libc_getsockname(int sockfd,
 	return swrap.fns.libc_getsockname(sockfd, addr, addrlen);
 }
 
+static int libc_getsockopt(int sockfd,
+			   int level,
+			   int optname,
+			   void *optval,
+			   socklen_t *optlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, getsockopt);
+
+	return swrap.fns.libc_getsockopt(sockfd, level, optname, optval, optlen);
+}
+
 static int libc_vioctl(int d, unsigned long int request, va_list ap)
 {
 	long int args[4];
@@ -2482,19 +2493,19 @@ static int swrap_getsockopt(int s, int level, int optname,
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_getsockopt(s,
-						 level,
-						 optname,
-						 optval,
-						 optlen);
+		return libc_getsockopt(s,
+				       level,
+				       optname,
+				       optval,
+				       optlen);
 	}
 
 	if (level == SOL_SOCKET) {
-		return swrap.fns.libc_getsockopt(s,
-						 level,
-						 optname,
-						 optval,
-						 optlen);
+		return libc_getsockopt(s,
+				       level,
+				       optname,
+				       optval,
+				       optlen);
 	}
 
 	errno = ENOPROTOOPT;
