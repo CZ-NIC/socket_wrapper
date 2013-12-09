@@ -406,6 +406,32 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 
 	return handle;
 }
+
+static void *_swrap_load_lib_function(enum swrap_lib lib, const char *fn_name)
+{
+	void *handle;
+	void *func;
+
+	handle = swrap_load_lib_handle(lib);
+
+	func = dlsym(handle, fn_name);
+	if (func == NULL) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+				"Failed to find %s: %s\n",
+				fn_name, dlerror());
+		exit(-1);
+	}
+
+	return func;
+}
+
+#define swrap_load_lib_function(lib, fn_name) \
+	if (swrap.fns.libc_##fn_name == NULL) { \
+		*(void **) (&swrap.fns.libc_##fn_name) = \
+			_swrap_load_lib_function(lib, #fn_name); \
+	}
+
+
 static void *swrap_libc_fn(void *handle, const char *fn_name)
 {
 	void *func;
