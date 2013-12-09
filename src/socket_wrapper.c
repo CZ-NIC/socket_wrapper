@@ -665,6 +665,8 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	int rc;
 	int i;
 
+	swrap_load_lib_function(SWRAP_LIBC, ioctl);
+
 	for (i = 0; i < 4; i++) {
 		args[i] = va_arg(ap, long int);
 	}
