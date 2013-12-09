@@ -681,6 +681,13 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	return rc;
 }
 
+static int libc_listen(int sockfd, int backlog)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, listen);
+
+	return swrap.fns.libc_listen(sockfd, backlog);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -2412,10 +2419,10 @@ static int swrap_listen(int s, int backlog)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_listen(s, backlog);
+		return libc_listen(s, backlog);
 	}
 
-	ret = swrap.fns.libc_listen(s, backlog);
+	ret = libc_listen(s, backlog);
 
 	return ret;
 }
