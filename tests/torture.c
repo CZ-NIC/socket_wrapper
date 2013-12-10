@@ -31,30 +31,64 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _TORTURE_H
-#define _TORTURE_H
-
 #include "config.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
+#include "torture.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-#define TORTURE_ECHO_SRV_PORT 7
+#define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
+#define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
+#define TORTURE_ECHO_SRV_IPV4 "127.0.0.10"
+#define TORTURE_ECHO_SRV_IPV6 "::10"
 
-struct torture_state {
-	char *socket_dir;
-	char *srv_pidfile;
-};
+void torture_setup_socket_dir(void **state)
+{
+	struct torture_state *s;
+	const char *p;
+	size_t len;
 
-#ifndef ZERO_STRUCT
-#define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
-#endif
+	s = malloc(sizeof(struct torture_state));
+	assert_non_null(s);
 
-void torture_setup_socket_dir(void **state);
-void torture_setup_echo_srv_udp_ipv4(void **state);
+	s->socket_dir = strdup(TORTURE_SOCKET_DIR);
+	assert_non_null(s->socket_dir);
 
-#endif /* _TORTURE_H */
+	p = mkdtemp(s->socket_dir);
+	assert_non_null(p);
+
+	len = strlen(p) + 1 + strlen(TORTURE_ECHO_SRV_PIDFILE) + 1;
+
+	s->srv_pidfile = malloc(len);
+	assert_non_null(s->srv_pidfile);
+
+	snprintf(s->srv_pidfile, len, "%s/%s", p, TORTURE_ECHO_SRV_PIDFILE);
+
+	setenv("SOCKET_WRAPPER_DIR", p, 1);
+	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "21", 1);
+
+	*state = s;
+}
+
+void torture_setup_echo_srv_udp_ipv4(void **state)
+{
+	struct torture_state *s;
+	char start_echo_srv[1024] = {0};
+	int rc;
+
+	torture_setup_socket_dir(state);
+
+	s = *state;
+
+	snprintf(start_echo_srv, sizeof(start_echo_srv),
+		 "%s/tests/echo_srv -b %s -D -u --pid %s",
+		 BINARYDIR, TORTURE_ECHO_SRV_IPV4, s->srv_pidfile);
+
+	rc = system(start_echo_srv);
+	assert_int_equal(rc, 0);
+
+	sleep(1);
+}

@@ -6,13 +6,21 @@ include_directories(
   ${CMOCKA_INCLUDE_DIR}
 )
 
+set(TORTURE_LIBRARY torture)
+
+# RFC862 echo server
 add_executable(echo_srv echo_srv.c)
 
-add_cmocka_test(testsuite testsuite.c ${CMOCKA_LIBRARY} ${SWRAP_REQUIRED_LIBRARIES})
-add_cmocka_test(test_echo_udp_sendto_recvfrom test_echo_udp_sendto_recvfrom.c ${CMOCKA_LIBRARY} ${SWRAP_REQUIRED_LIBRARIES})
+add_library(${TORTURE_LIBRARY} STATIC torture.c)
+target_link_libraries(${TORTURE_LIBRARY}
+    ${CMOCKA_LIBRARY}
+    ${SWRAP_REQUIRED_LIBRARIES})
 
 set(SWRAP_TESTS testsuite test_echo_udp_sendto_recvfrom)
+
 foreach(_SWRAP_TEST ${SWRAP_TESTS})
+    add_cmocka_test(${_SWRAP_TEST} ${_SWRAP_TEST}.c ${TORTURE_LIBRARY})
+
     if (OSX)
         set_property(
             TEST
