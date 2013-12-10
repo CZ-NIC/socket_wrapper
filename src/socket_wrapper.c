@@ -721,6 +721,13 @@ static int libc_recvfrom(int sockfd,
 	return swrap.fns.libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 }
 
+static int libc_send(int sockfd, const void *buf, size_t len, int flags)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, send);
+
+	return swrap.fns.libc_send(sockfd, buf, len, flags);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -3077,7 +3084,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_send(s, buf, len, flags);
+		return libc_send(s, buf, len, flags);
 	}
 
 	tmp.iov_base = discard_const_p(char, buf);
@@ -3100,7 +3107,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	buf = msg.msg_iov[0].iov_base;
 	len = msg.msg_iov[0].iov_len;
 
-	ret = swrap.fns.libc_send(s, buf, len, flags);
+	ret = libc_send(s, buf, len, flags);
 
 	swrap_sendmsg_after(si, &msg, NULL, ret);
 
