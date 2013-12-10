@@ -296,8 +296,15 @@ int main(int argc, char **argv)
                 opts.daemon = true;
                 break;
             default: /* '?' */
-                fprintf(stderr, "Usage: %s [-p port] [-u] [-t] [--pid pidfile]\n",
-                        argv[0]);
+                fprintf(stderr, "Usage: %s [-p port] [-u] [-t] [-b bind_addr] " \
+                                "[-D] [--pid pidfile]\n"
+                                "-t makes the server listen on TCP\n"
+                                "-u makes the server listen on UDP\n"
+                                "-D tells the server to become a deamon and " \
+                                "write a PIDfile\n"
+                                "The default port is 7, the default PIDfile is " \
+                                "echo_srv.pid in the current directory\n",
+                                argv[0]);
                 ret = 1;
                 goto done;
         }
