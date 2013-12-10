@@ -11,132 +11,17 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <signal.h>
-
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include <unistd.h>
-
-#define ECHO_SRV_IP "127.0.0.10"
-#define ECHO_SRV_PORT 7
-
-#define ECHO_SRV_PIDFILE "echo_srv.pid"
-
-struct test_opts {
-	char *socket_wrapper_dir;
-	char *pidfile;
-};
-
-static void setup(void **state)
+static void setup_echo_srv_udp_ipv4(void **state)
 {
-	char test_tmpdir[256];
-	struct test_opts *o;
-	size_t len;
-	const char *p;
-
-	o = malloc(sizeof(struct test_opts));
-	assert_non_null(o);
-
-	snprintf(test_tmpdir, sizeof(test_tmpdir), "/tmp/test_socket_wrapper_XXXXXX");
-
-	p = mkdtemp(test_tmpdir);
-	assert_non_null(p);
-
-	o->socket_wrapper_dir = strdup(p);
-	assert_non_null(o->socket_wrapper_dir);
-
-	len = strlen(p) + 1 + strlen(ECHO_SRV_PIDFILE) + 1;
-
-	o->pidfile = malloc(len);
-	assert_non_null(o->pidfile);
-
-	snprintf(o->pidfile, len, "%s/%s", p, ECHO_SRV_PIDFILE);
-
-	setenv("SOCKET_WRAPPER_DIR", p, 1);
-	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "21", 1);
-
-	*state = o;
-}
-
-static void setup_echo_srv_udp(void **state)
-{
-	struct test_opts *o;
-	char start_echo_srv[1024] = {0};
-	int rc;
-
-	setup(state);
-	o = *state;
-
-	snprintf(start_echo_srv, sizeof(start_echo_srv),
-		 "%s/tests/echo_srv -b %s -D -u --pid %s",
-		 BINARYDIR, ECHO_SRV_IP, o->pidfile);
-
-	rc = system(start_echo_srv);
-	assert_int_equal(rc, 0);
-
-	sleep(1);
+	torture_setup_echo_srv_udp_ipv4(state);
 }
 
 static void teardown(void **state)
 {
-	struct test_opts *o = *state;
-	char remove_cmd[1024] = {0};
-	int rc;
-
-	(void) state; /* unused */
-
-	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", o->socket_wrapper_dir);
-
-	rc = system(remove_cmd);
-	if (rc < 0) {
-		fprintf(stderr, "%s failed: %s", remove_cmd, strerror(errno));
-	}
-
-	free(o->socket_wrapper_dir);
-	free(o->pidfile);
-	free(o);
-}
-
-static void teardown_echo_srv_udp(void **state)
-{
-	struct test_opts *o = *state;
-	char buf[8] = {0};
-	long int tmp;
-	ssize_t rc;
-	pid_t pid;
-	int fd;
-
-	/* read the pidfile */
-	fd = open(o->pidfile, O_RDONLY);
-	if (fd < 0) {
-		goto done;
-	}
-
-	rc = read(fd, buf, sizeof(buf));
-	close(fd);
-	if (rc <= 0) {
-		goto done;
-	}
-
-	buf[sizeof(buf) - 1] = '\0';
-
-	tmp = strtol(buf, NULL, 10);
-	if (tmp == 0 || tmp > 0xFFFF || errno == ERANGE) {
-		goto done;
-	}
-
-	pid = (pid_t)(tmp & 0xFFFF);
-
-	/* kill daemon */
-	kill(pid, SIGTERM);
-
-done:
-	teardown(state);
+	torture_teardown_echo_srv(state);
 }
 
 static void test_sendto_recvfrom_ipv4(void **state)
@@ -155,9 +40,9 @@ static void test_sendto_recvfrom_ipv4(void **state)
 
 	ZERO_STRUCT(sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(ECHO_SRV_PORT);
+	sin.sin_port = htons(TORTURE_ECHO_SRV_PORT);
 
-	rc = inet_aton(ECHO_SRV_IP, &sin.sin_addr);
+	rc = inet_aton(TORTURE_ECHO_SRV_IPV4, &sin.sin_addr);
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
@@ -191,7 +76,7 @@ int main(void) {
 	int rc;
 
 	const UnitTest tests[] = {
-		unit_test_setup_teardown(test_sendto_recvfrom_ipv4, setup_echo_srv_udp, teardown_echo_srv_udp),
+		unit_test_setup_teardown(test_sendto_recvfrom_ipv4, setup_echo_srv_udp_ipv4, teardown),
 	};
 
 	rc = run_tests(tests);
