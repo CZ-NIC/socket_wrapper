@@ -702,6 +702,13 @@ static ssize_t libc_readv(int fd, const struct iovec *iov, int iovcnt)
 	return swrap.fns.libc_readv(fd, iov, iovcnt);
 }
 
+static int libc_recv(int sockfd, void *buf, size_t len, int flags)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, recv);
+
+	return swrap.fns.libc_recv(sockfd, buf, len, flags);
+}
+
 static int libc_recvfrom(int sockfd,
 			 void *buf,
 			 size_t len,
@@ -2999,14 +3006,14 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_recv(s, buf, len, flags);
+		return libc_recv(s, buf, len, flags);
 	}
 
 	if (si->type == SOCK_STREAM) {
 		len = MIN(len, SOCKET_MAX_PACKET);
 	}
 
-	ret = swrap.fns.libc_recv(s, buf, len, flags);
+	ret = libc_recv(s, buf, len, flags);
 	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
 		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
 	} else if (ret == 0) { /* END OF FILE */
