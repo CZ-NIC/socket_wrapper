@@ -702,6 +702,18 @@ static ssize_t libc_readv(int fd, const struct iovec *iov, int iovcnt)
 	return swrap.fns.libc_readv(fd, iov, iovcnt);
 }
 
+static int libc_recvfrom(int sockfd,
+			 void *buf,
+			 size_t len,
+			 int flags,
+			 struct sockaddr *src_addr,
+			 socklen_t *addrlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, recvfrom);
+
+	return swrap.fns.libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -2844,12 +2856,12 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 	socklen_t ss_len = sizeof(ss);
 
 	if (!si) {
-		return swrap.fns.libc_recvfrom(s,
-					       buf,
-					       len,
-					       flags,
-					       from,
-					       fromlen);
+		return libc_recvfrom(s,
+				     buf,
+				     len,
+				     flags,
+				     from,
+				     fromlen);
 	}
 
 	if (!from) {
@@ -2863,12 +2875,12 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 
 	/* irix 6.4 forgets to null terminate the sun_path string :-( */
 	memset(&un_addr, 0, sizeof(un_addr));
-	ret = swrap.fns.libc_recvfrom(s,
-				      buf,
-				      len,
-				      flags,
-				      (struct sockaddr *)(void *)&un_addr,
-				      &un_addrlen);
+	ret = libc_recvfrom(s,
+			    buf,
+			    len,
+			    flags,
+			    (struct sockaddr *)(void *)&un_addr,
+			    &un_addrlen);
 	if (ret == -1) 
 		return ret;
 
