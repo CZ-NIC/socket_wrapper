@@ -35,6 +35,13 @@
 
 #include "torture.h"
 
+#include <errno.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <signal.h>
+#include <fcntl.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,8 +49,6 @@
 
 #define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
 #define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
-#define TORTURE_ECHO_SRV_IPV4 "127.0.0.10"
-#define TORTURE_ECHO_SRV_IPV6 "::10"
 
 void torture_setup_socket_dir(void **state)
 {
@@ -91,4 +96,64 @@ void torture_setup_echo_srv_udp_ipv4(void **state)
 	assert_int_equal(rc, 0);
 
 	sleep(1);
+}
+
+void torture_teardown_socket_dir(void **state)
+{
+	struct torture_state *s = *state;
+	char remove_cmd[1024] = {0};
+	int rc;
+
+	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", s->socket_dir);
+
+	rc = system(remove_cmd);
+	if (rc < 0) {
+		fprintf(stderr, "%s failed: %s", remove_cmd, strerror(errno));
+	}
+
+	free(s->socket_dir);
+	free(s->srv_pidfile);
+	free(s);
+}
+
+void torture_teardown_echo_srv(void **state)
+{
+	struct torture_state *s = *state;
+	char buf[8] = {0};
+	long int tmp;
+	ssize_t rc;
+	pid_t pid;
+	int fd;
+
+	/* read the pidfile */
+	fd = open(s->srv_pidfile, O_RDONLY);
+	if (fd < 0) {
+		goto done;
+	}
+
+	rc = read(fd, buf, sizeof(buf));
+	close(fd);
+	if (rc <= 0) {
+		goto done;
+	}
+
+	buf[sizeof(buf) - 1] = '\0';
+
+	tmp = strtol(buf, NULL, 10);
+	if (tmp == 0 || tmp > 0xFFFF || errno == ERANGE) {
+		goto done;
+	}
+
+	pid = (pid_t)(tmp & 0xFFFF);
+
+	/* Make sure the daemon goes away! */
+	rc = kill(pid, SIGTERM);
+	if (rc < 0) {
+		fprintf(stderr,
+			"Failed to kill the echo server: %s",
+			strerror(errno));
+	}
+
+done:
+	torture_teardown_socket_dir(state);
 }
