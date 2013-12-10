@@ -169,6 +169,14 @@ int main(void) {
     return 0;
 }" HAVE_GCC_THREAD_LOCAL_STORAGE)
 
+check_c_source_compiles("
+void log_fn(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
+
+int main(void) {
+    return 0;
+}" HAVE_FUNCTION_ATTRIBUTE_FORMAT)
+
+
 check_library_exists(dl dlopen "" HAVE_LIBDL)
 if (HAVE_LIBDL)
     find_library(DLFCN_LIBRARY dl)

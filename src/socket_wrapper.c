@@ -73,11 +73,11 @@ enum swrap_dbglvl_e {
 };
 
 /* GCC have printf type attribute check. */
-#ifdef __GNUC__
+#ifdef HAVE_FUNCTION_ATTRIBUTE_FORMAT
 #define PRINTF_ATTRIBUTE(a,b) __attribute__ ((__format__ (__printf__, a, b)))
 #else
 #define PRINTF_ATTRIBUTE(a,b)
-#endif /* __GNUC__ */
+#endif /* HAVE_FUNCTION_ATTRIBUTE_FORMAT */
 
 #ifdef HAVE_DESTRUCTOR_ATTRIBUTE
 #define DESTRUCTOR_ATTRIBUTE __attribute__ ((destructor))
