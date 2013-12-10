@@ -78,7 +78,7 @@ void torture_setup_socket_dir(void **state)
 	*state = s;
 }
 
-void torture_setup_echo_srv_udp_ipv4(void **state)
+static void torture_setup_echo_srv_udp_ip(void **state, const char *ip)
 {
 	struct torture_state *s;
 	char start_echo_srv[1024] = {0};
@@ -90,12 +90,22 @@ void torture_setup_echo_srv_udp_ipv4(void **state)
 
 	snprintf(start_echo_srv, sizeof(start_echo_srv),
 		 "%s/tests/echo_srv -b %s -D -u --pid %s",
-		 BINARYDIR, TORTURE_ECHO_SRV_IPV4, s->srv_pidfile);
+		 BINARYDIR, ip, s->srv_pidfile);
 
 	rc = system(start_echo_srv);
 	assert_int_equal(rc, 0);
 
 	sleep(1);
+}
+
+void torture_setup_echo_srv_udp_ipv4(void **state)
+{
+	torture_setup_echo_srv_udp_ip(state, TORTURE_ECHO_SRV_IPV4);
+}
+
+void torture_setup_echo_srv_udp_ipv6(void **state)
+{
+	torture_setup_echo_srv_udp_ip(state, TORTURE_ECHO_SRV_IPV6);
 }
 
 void torture_teardown_socket_dir(void **state)
