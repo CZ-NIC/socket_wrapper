@@ -717,6 +717,8 @@ static const char *socket_wrapper_dir(void)
 	if (strncmp(s, "./", 2) == 0) {
 		s += 2;
 	}
+
+	SWRAP_LOG(SWRAP_LOG_TRACE, "socket_wrapper_dir: %s", s);
 	return s;
 }
 
@@ -749,6 +751,9 @@ static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, sock
 		errno = EINVAL;
 		return -1;
 	}
+
+	SWRAP_LOG(SWRAP_LOG_TRACE, "type %c iface %u port %u",
+			type, iface, prt);
 
 	if (iface == 0 || iface > MAX_WRAPPED_INTERFACES) {
 		errno = EINVAL;
@@ -834,6 +839,10 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 			a_type = SOCKET_TYPE_CHAR_UDP;
 			b_type = SOCKET_TYPE_CHAR_UDP;
 			break;
+		default:
+			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
+			errno = ESOCKTNOSUPPORT;
+			return -1;
 		}
 
 		prt = ntohs(in->sin_port);
@@ -872,6 +881,10 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 		case SOCK_DGRAM:
 			type = SOCKET_TYPE_CHAR_UDP_V6;
 			break;
+		default:
+			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
+			errno = ESOCKTNOSUPPORT;
+			return -1;
 		}
 
 		/* XXX no multicast/broadcast */
@@ -892,11 +905,13 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 	}
 #endif
 	default:
+		SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown address family!\n");
 		errno = ENETUNREACH;
 		return -1;
 	}
 
 	if (prt == 0) {
+		SWRAP_LOG(SWRAP_LOG_WARN, "Port not set\n");
 		errno = EINVAL;
 		return -1;
 	}
@@ -904,12 +919,14 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 	if (is_bcast) {
 		snprintf(un->sun_path, sizeof(un->sun_path), "%s/EINVAL", 
 			 socket_wrapper_dir());
+		SWRAP_LOG(SWRAP_LOG_DEBUG, "un path [%s]", un->sun_path);
 		/* the caller need to do more processing */
 		return 0;
 	}
 
 	snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT, 
 		 socket_wrapper_dir(), type, iface, prt);
+	SWRAP_LOG(SWRAP_LOG_DEBUG, "un path [%s]", un->sun_path);
 
 	return 0;
 }
@@ -948,6 +965,10 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 			a_type = SOCKET_TYPE_CHAR_UDP;
 			b_type = SOCKET_TYPE_CHAR_UDP;
 			break;
+		default:
+			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
+			errno = ESOCKTNOSUPPORT;
+			return -1;
 		}
 
 		if (addr == 0) {
@@ -989,6 +1010,10 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 		case SOCK_DGRAM:
 			type = SOCKET_TYPE_CHAR_UDP_V6;
 			break;
+		default:
+			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
+			errno = ESOCKTNOSUPPORT;
+			return -1;
 		}
 
 		/* XXX no multicast/broadcast */
@@ -1011,6 +1036,7 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 	}
 #endif
 	default:
+		SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown address family\n");
 		errno = EADDRNOTAVAIL;
 		return -1;
 	}
@@ -1041,6 +1067,7 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 
 	snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT, 
 		 socket_wrapper_dir(), type, iface, prt);
+	SWRAP_LOG(SWRAP_LOG_DEBUG, "un path [%s]", un->sun_path);
 	return 0;
 }
 
@@ -1090,6 +1117,7 @@ static int sockaddr_convert_to_un(struct socket_info *si,
 		case SOCK_DGRAM:
 			break;
 		default:
+			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
 			errno = ESOCKTNOSUPPORT;
 			return -1;
 		}
@@ -1103,6 +1131,7 @@ static int sockaddr_convert_to_un(struct socket_info *si,
 	}
 
 	errno = EAFNOSUPPORT;
+	SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown address family\n");
 	return -1;
 }
 
@@ -1133,6 +1162,7 @@ static int sockaddr_convert_from_un(const struct socket_info *si,
 		case SOCK_DGRAM:
 			break;
 		default:
+			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
 			errno = ESOCKTNOSUPPORT;
 			return -1;
 		}
@@ -1145,6 +1175,7 @@ static int sockaddr_convert_from_un(const struct socket_info *si,
 		break;
 	}
 
+	SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown address family\n");
 	errno = EAFNOSUPPORT;
 	return -1;
 }
