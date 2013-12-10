@@ -747,6 +747,17 @@ static int libc_sendto(int sockfd,
 	return swrap.fns.libc_sendto(sockfd, buf, len, flags, dst_addr, addrlen);
 }
 
+static int libc_setsockopt(int sockfd,
+			   int level,
+			   int optname,
+			   const void *optval,
+			   socklen_t optlen)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, setsockopt);
+
+	return swrap.fns.libc_setsockopt(sockfd, level, optname, optval, optlen);
+}
+
 /*********************************************************
  * SWRAP HELPER FUNCTIONS
  *********************************************************/
@@ -2599,19 +2610,19 @@ static int swrap_setsockopt(int s, int level, int optname,
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
-		return swrap.fns.libc_setsockopt(s,
-						 level,
-						 optname,
-						 optval,
-						 optlen);
+		return libc_setsockopt(s,
+				       level,
+				       optname,
+				       optval,
+				       optlen);
 	}
 
 	if (level == SOL_SOCKET) {
-		return swrap.fns.libc_setsockopt(s,
-						 level,
-						 optname,
-						 optval,
-						 optlen);
+		return libc_setsockopt(s,
+				       level,
+				       optname,
+				       optval,
+				       optlen);
 	}
 
 	switch (si->family) {
