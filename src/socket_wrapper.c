@@ -146,8 +146,8 @@ enum swrap_dbglvl_e {
 
 /* we need to use a very terse format here as IRIX 6.4 silently
    truncates names to 16 chars, so if we use a longer name then we
-   can't tell which port a packet came from with recvfrom() 
-   
+   can't tell which port a packet came from with recvfrom()
+
    with this format we have 8 chars left for the directory name
 */
 #define SOCKET_FORMAT "%c%02X%04X"
@@ -347,6 +347,21 @@ enum swrap_lib {
     SWRAP_LIBSOCKET,
 };
 
+static const char *swrap_str_lib(enum swrap_lib lib)
+{
+	switch (lib) {
+	case SWRAP_LIBC:
+		return "libc";
+	case SWRAP_LIBNSL:
+		return "libnsl";
+	case SWRAP_LIBSOCKET:
+		return "libsocket";
+	}
+
+	/* Compiler would warn us about unhandled enum value if we get here */
+	return "unknown";
+}
+
 static void *swrap_load_lib_handle(enum swrap_lib lib)
 {
 	int flags = RTLD_LAZY;
@@ -422,6 +437,9 @@ static void *_swrap_load_lib_function(enum swrap_lib lib, const char *fn_name)
 		exit(-1);
 	}
 
+	SWRAP_LOG(SWRAP_LOG_TRACE,
+			"Loaded %s from %s",
+			fn_name, swrap_str_lib(lib));
 	return func;
 }
 
