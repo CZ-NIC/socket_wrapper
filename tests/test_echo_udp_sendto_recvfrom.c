@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 static void setup_echo_srv_udp_ipv4(void **state)
 {
@@ -33,8 +34,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 {
 	struct sockaddr_in sin;
 	socklen_t slen = sizeof(struct sockaddr_in);
-	char ip[INET_ADDRSTRLEN] = {0};
-	const char *a;
+	char send_buf[64] = {0};
+	char recv_buf[64] = {0};
 	ssize_t ret;
 	int rc;
 	int i;
@@ -53,8 +54,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
-		char send_buf[64] = {0};
-		char recv_buf[64] = {0};
+		char ip[INET_ADDRSTRLEN] = {0};
+		const char *a;
 		struct sockaddr_in srv_in;
 		socklen_t rlen = sizeof(srv_in);
 
@@ -74,6 +75,7 @@ static void test_sendto_recvfrom_ipv4(void **state)
 			       0,
 			       (struct sockaddr *)&srv_in,
 			       &rlen);
+		assert_int_not_equal(ret, -1);
 
 		a = inet_ntop(AF_INET, &srv_in.sin_addr, ip, sizeof(ip));
 		assert_non_null(a);
@@ -81,6 +83,24 @@ static void test_sendto_recvfrom_ipv4(void **state)
 
 		assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
 	}
+
+	ret = sendto(s,
+		     send_buf,
+		     sizeof(send_buf),
+		     0,
+		     (struct sockaddr *)(void *)&sin,
+		     slen);
+	assert_int_not_equal(ret, -1);
+
+	ret = recvfrom(s,
+		       recv_buf,
+		       sizeof(recv_buf),
+		       0,
+		       NULL,
+		       NULL);
+	assert_int_not_equal(ret, -1);
+
+	close(s);
 }
 
 #ifdef HAVE_IPV6
@@ -88,8 +108,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 {
 	struct sockaddr_in6 sin6;
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	char ip[INET6_ADDRSTRLEN] = {0};
-	const char *a;
+	char send_buf[64] = {0};
+	char recv_buf[64] = {0};
 	ssize_t ret;
 	int rc;
 	int i;
@@ -108,8 +128,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
-		char send_buf[64] = {0};
-		char recv_buf[64] = {0};
+		char ip[INET6_ADDRSTRLEN] = {0};
+		const char *a;
 		struct sockaddr_in6 srv_in6;
 		socklen_t rlen = sizeof(srv_in6);
 
@@ -129,6 +149,7 @@ static void test_sendto_recvfrom_ipv6(void **state)
 			       0,
 			       (struct sockaddr *)&srv_in6,
 			       &rlen);
+		assert_int_not_equal(ret, -1);
 
 		a = inet_ntop(AF_INET6, &srv_in6.sin6_addr, ip, sizeof(ip));
 		assert_non_null(a);
@@ -136,6 +157,24 @@ static void test_sendto_recvfrom_ipv6(void **state)
 
 		assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
 	}
+
+	ret = sendto(s,
+		     send_buf,
+		     sizeof(send_buf),
+		     0,
+		     (struct sockaddr *)(void *)&sin6,
+		     slen);
+	assert_int_not_equal(ret, -1);
+
+	ret = recvfrom(s,
+		       recv_buf,
+		       sizeof(recv_buf),
+		       0,
+		       NULL,
+		       NULL);
+	assert_int_not_equal(ret, -1);
+
+	close(s);
 }
 #endif
 
