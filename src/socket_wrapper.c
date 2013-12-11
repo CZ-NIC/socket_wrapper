@@ -95,6 +95,14 @@ enum swrap_dbglvl_e {
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
+#if SIZEOF_PID_T == 8
+# define SPRIpid PRIu64
+#elif SIZEOF_UID_T == 4
+# define SPRIpid PRIu32
+#else
+# define SPRIpid "%d"	    /* Sane default for most platforms */
+#endif /* SIZEOF_UID_T */
+
 #ifndef ZERO_STRUCT
 #define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
 #endif
@@ -241,22 +249,22 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
 		switch (dbglvl) {
 			case SWRAP_LOG_ERROR:
 				fprintf(stderr,
-					"SWRAP_ERROR(%d): %s\n",
+					"SWRAP_ERROR("SPRIpid"): %s\n",
 					getpid(), buffer);
 				break;
 			case SWRAP_LOG_WARN:
 				fprintf(stderr,
-					"SWRAP_WARN(%d): %s\n",
+					"SWRAP_WARN("SPRIpid"): %s\n",
 					getpid(), buffer);
 				break;
 			case SWRAP_LOG_DEBUG:
 				fprintf(stderr,
-					"SWRAP_DEBUG(%d): %s\n",
+					"SWRAP_DEBUG("SPRIpid"): %s\n",
 					getpid(), buffer);
 				break;
 			case SWRAP_LOG_TRACE:
 				fprintf(stderr,
-					"SWRAP_TRACE(%d): %s\n",
+					"SWRAP_TRACE("SPRIpid"): %s\n",
 					getpid(), buffer);
 				break;
 		}

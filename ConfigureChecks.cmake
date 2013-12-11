@@ -192,4 +192,6 @@ if (NOT WIN32)
     test_big_endian(WORDS_BIGENDIAN)
 endif (NOT WIN32)
 
+check_type_size(pid_t SIZEOF_PID_T)
+
 set(SWRAP_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} CACHE INTERNAL "swrap required system libraries")
