@@ -54,7 +54,7 @@ static void test_sendto_recvfrom_ipv4(void **state)
 		char send_buf[64] = {0};
 		char recv_buf[64] = {0};
 		struct sockaddr_in cli_in;
-		socklen_t clen;
+		socklen_t clen = sizeof(cli_in);
 
 		snprintf(send_buf, sizeof(send_buf), "packet.%d", i);
 
@@ -65,6 +65,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 			     (struct sockaddr *)(void *)&sin,
 			     slen);
 		assert_int_not_equal(ret, -1);
+
+		ZERO_STRUCT(cli_in);
 
 		ret = recvfrom(s,
 			       recv_buf,
@@ -103,7 +105,7 @@ static void test_sendto_recvfrom_ipv6(void **state)
 		char send_buf[64] = {0};
 		char recv_buf[64] = {0};
 		struct sockaddr_in6 cli_in6;
-		socklen_t clen;
+		socklen_t clen = sizeof(cli_in6);
 
 		snprintf(send_buf, sizeof(send_buf), "packet.%d", i);
 
@@ -114,6 +116,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 			     (struct sockaddr *)(void *)&sin6,
 			     slen);
 		assert_int_not_equal(ret, -1);
+
+		ZERO_STRUCT(cli_in6);
 
 		ret = recvfrom(s,
 			       recv_buf,
