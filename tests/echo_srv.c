@@ -25,6 +25,14 @@
 #define BUFSIZE     4194304
 #endif /* BUFSIZE */
 
+#ifndef discard_const
+#define discard_const(ptr) ((void *)((uintptr_t)(ptr)))
+#endif
+
+#ifndef discard_const_p
+#define discard_const_p(type, ptr) ((type *)discard_const(ptr))
+#endif
+
 struct echo_srv_opts {
     int port;
     int socktype;
@@ -257,13 +265,13 @@ int main(int argc, char **argv)
     int opt;
     int optindex;
     static struct option long_options[] = {
-        {"tcp",         no_argument, 0,  't' },
-        {"udp",         no_argument, 0,  'u' },
-        {"bind-addr",   required_argument, 0,  'b' },
-        {"port",        required_argument, 0,  'p' },
-        {"daemon",      no_argument, 0,  'D' },
-        {"pid",         required_argument, 0,  0 },
-        {0,             0,                 0,  0 }
+        { discard_const_p(char, "tcp"),         no_argument,		0,  't' },
+        { discard_const_p(char, "udp"),         no_argument,		0,  'u' },
+        { discard_const_p(char, "bind-addr"),   required_argument,	0,  'b' },
+        { discard_const_p(char, "port"),        required_argument,	0,  'p' },
+        { discard_const_p(char, "daemon"),      no_argument,		0,  'D' },
+        { discard_const_p(char, "pid"),         required_argument,	0,  0 },
+        {0,             0,						0,  0 }
     };
 
     opts.port = DFL_PORT;
