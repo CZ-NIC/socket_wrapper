@@ -33,6 +33,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 {
 	struct sockaddr_in sin;
 	socklen_t slen = sizeof(struct sockaddr_in);
+	char ip[INET_ADDRSTRLEN] = {0};
+	const char *a;
 	ssize_t ret;
 	int rc;
 	int i;
@@ -53,8 +55,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 	for (i = 0; i < 10; i++) {
 		char send_buf[64] = {0};
 		char recv_buf[64] = {0};
-		struct sockaddr_in cli_in;
-		socklen_t clen = sizeof(cli_in);
+		struct sockaddr_in srv_in;
+		socklen_t rlen = sizeof(srv_in);
 
 		snprintf(send_buf, sizeof(send_buf), "packet.%d", i);
 
@@ -66,14 +68,16 @@ static void test_sendto_recvfrom_ipv4(void **state)
 			     slen);
 		assert_int_not_equal(ret, -1);
 
-		ZERO_STRUCT(cli_in);
-
 		ret = recvfrom(s,
 			       recv_buf,
 			       sizeof(recv_buf),
 			       0,
-			       (struct sockaddr *)&cli_in,
-			       &clen);
+			       (struct sockaddr *)&srv_in,
+			       &rlen);
+
+		a = inet_ntop(AF_INET, &srv_in.sin_addr, ip, sizeof(ip));
+		assert_non_null(a);
+		assert_string_equal(a, TORTURE_ECHO_SRV_IPV4);
 
 		assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
 	}
@@ -84,6 +88,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 {
 	struct sockaddr_in6 sin6;
 	socklen_t slen = sizeof(struct sockaddr_in6);
+	char ip[INET6_ADDRSTRLEN] = {0};
+	const char *a;
 	ssize_t ret;
 	int rc;
 	int i;
@@ -104,8 +110,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 	for (i = 0; i < 10; i++) {
 		char send_buf[64] = {0};
 		char recv_buf[64] = {0};
-		struct sockaddr_in6 cli_in6;
-		socklen_t clen = sizeof(cli_in6);
+		struct sockaddr_in6 srv_in6;
+		socklen_t rlen = sizeof(srv_in6);
 
 		snprintf(send_buf, sizeof(send_buf), "packet.%d", i);
 
@@ -117,14 +123,16 @@ static void test_sendto_recvfrom_ipv6(void **state)
 			     slen);
 		assert_int_not_equal(ret, -1);
 
-		ZERO_STRUCT(cli_in6);
-
 		ret = recvfrom(s,
 			       recv_buf,
 			       sizeof(recv_buf),
 			       0,
-			       (struct sockaddr *)&cli_in6,
-			       &clen);
+			       (struct sockaddr *)&srv_in6,
+			       &rlen);
+
+		a = inet_ntop(AF_INET6, &srv_in6.sin6_addr, ip, sizeof(ip));
+		assert_non_null(a);
+		assert_string_equal(a, TORTURE_ECHO_SRV_IPV6);
 
 		assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
 	}

@@ -44,8 +44,8 @@
 #include <string.h>
 
 #define TORTURE_ECHO_SRV_IPV4 "127.0.0.10"
-/* socket wrapper IPv6 prefix  FD00::5357:5Fxx */
-#define TORTURE_ECHO_SRV_IPV6 "FD00::5357:5F10"
+/* socket wrapper IPv6 prefix  fd00::5357:5fxx */
+#define TORTURE_ECHO_SRV_IPV6 "fd00::5357:5f10"
 #define TORTURE_ECHO_SRV_PORT 7
 
 struct torture_state {
