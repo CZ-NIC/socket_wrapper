@@ -355,6 +355,7 @@ enum swrap_lib {
     SWRAP_LIBSOCKET,
 };
 
+#ifndef NDEBUG
 static const char *swrap_str_lib(enum swrap_lib lib)
 {
 	switch (lib) {
@@ -369,6 +370,7 @@ static const char *swrap_str_lib(enum swrap_lib lib)
 	/* Compiler would warn us about unhandled enum value if we get here */
 	return "unknown";
 }
+#endif
 
 static void *swrap_load_lib_handle(enum swrap_lib lib)
 {
