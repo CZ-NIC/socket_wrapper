@@ -63,30 +63,6 @@ static void test_socket_wrapper_dir(void **state)
 }
 #endif
 
-static void test_swrap_ioctl_sock(void **state)
-{
-	int fd;
-	int rc;
-	int grp = -127;
-
-	(void) state; /* unused */
-
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	assert_int_not_equal(fd, -1);
-
-#ifdef FIONBIO
-	rc = ioctl(fd, FIONBIO);
-	assert_int_equal(rc, 0);
-#endif
-
-#ifdef SIOCGPGRP
-	rc = ioctl(fd, SIOCGPGRP, &grp);
-	assert_int_equal(rc, 0);
-
-	assert_int_not_equal(grp, -127);
-#endif
-}
-
 static void test_swrap_socket(void **state)
 {
 	int rc;
@@ -104,6 +80,25 @@ static void test_swrap_socket(void **state)
 	rc = socket(AF_INET, SOCK_DGRAM, 10);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EPROTONOSUPPORT);
+}
+
+static void test_swrap_ioctl_sock(void **state)
+{
+	int fd;
+	int rc;
+	int grp = -127;
+
+	(void) state; /* unused */
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	assert_int_not_equal(fd, -1);
+
+#ifdef SIOCGPGRP
+	rc = ioctl(fd, SIOCGPGRP, &grp);
+	assert_int_equal(rc, 0);
+
+	assert_int_not_equal(grp, -127);
+#endif
 }
 
 #if 0
