@@ -47,22 +47,6 @@ static void teardown(void **state)
 	}
 }
 
-#if 0
-static void test_socket_wrapper_dir(void **state)
-{
-	backup_env();
-
-	setenv("SOCKET_WRAPPER_DIR", "foo", 1);
-	assert_string_equal(socket_wrapper_dir(), "foo");
-	setenv("SOCKET_WRAPPER_DIR", "./foo", 1);
-	assert_string_equal(socket_wrapper_dir(), "foo");
-	unsetenv("SOCKET_WRAPPER_DIR");
-	assert_non_null(socket_wrapper_dir());
-
-	restore_env();
-}
-#endif
-
 static void test_swrap_socket(void **state)
 {
 	int rc;
@@ -100,22 +84,6 @@ static void test_swrap_ioctl_sock(void **state)
 	assert_int_not_equal(grp, -127);
 #endif
 }
-
-#if 0
-unsigned int socket_wrapper_default_iface(void);
-static bool test_socket_wrapper_default_iface(struct torture_context *tctx)
-{
-	backup_env();
-	unsetenv("SOCKET_WRAPPER_DEFAULT_IFACE");
-	torture_assert_int_equal(tctx, socket_wrapper_default_iface(), 1, "unset");
-	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "2", 1);
-	torture_assert_int_equal(tctx, socket_wrapper_default_iface(), 2, "unset");
-	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "bla", 1);
-	torture_assert_int_equal(tctx, socket_wrapper_default_iface(), 1, "unset");
-	restore_env();
-	return true;
-}
-#endif
 
 int main(void) {
 	int rc;
