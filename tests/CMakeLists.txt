@@ -10,6 +10,7 @@ set(TORTURE_LIBRARY torture)
 
 # RFC862 echo server
 add_executable(echo_srv echo_srv.c)
+target_link_libraries(echo_srv ${SWRAP_REQUIRED_LIBRARIES})
 
 add_library(${TORTURE_LIBRARY} STATIC torture.c)
 target_link_libraries(${TORTURE_LIBRARY}
