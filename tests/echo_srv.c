@@ -260,7 +260,7 @@ static void echo(int sock, struct echo_srv_opts *opts)
 int main(int argc, char **argv)
 {
     int ret;
-    int sock;
+    int sock = -1;
     struct echo_srv_opts opts;
     int opt;
     int optindex;
