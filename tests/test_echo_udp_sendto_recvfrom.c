@@ -50,7 +50,7 @@ static void test_sendto_recvfrom_ipv4(void **state)
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(TORTURE_ECHO_SRV_PORT);
 
-	rc = inet_aton(TORTURE_ECHO_SRV_IPV4, &sin.sin_addr);
+	rc = inet_pton(sin.sin_family, TORTURE_ECHO_SRV_IPV4, &sin.sin_addr);
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
