@@ -41,6 +41,7 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
+#include <stdint.h>
 #include <string.h>
 
 #define TORTURE_ECHO_SRV_IPV4 "127.0.0.10"
@@ -64,4 +65,5 @@ void torture_setup_echo_srv_udp_ipv6(void **state);
 void torture_teardown_socket_dir(void **state);
 void torture_teardown_echo_srv(void **state);
 
+void torture_generate_random_buffer(uint8_t *out, int len);
 #endif /* _TORTURE_H */

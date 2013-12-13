@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
 #define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
@@ -167,4 +168,15 @@ void torture_teardown_echo_srv(void **state)
 
 done:
 	torture_teardown_socket_dir(state);
+}
+
+void torture_generate_random_buffer(uint8_t *out, int len)
+{
+	int i;
+
+	srand(time(NULL));
+
+	for (i = 0; i < len; i++) {
+		out[i] = (uint8_t)rand();
+	}
 }
