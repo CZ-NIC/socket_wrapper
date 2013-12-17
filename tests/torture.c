@@ -39,6 +39,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 #include <signal.h>
 #include <fcntl.h>
 
@@ -79,19 +80,34 @@ void torture_setup_socket_dir(void **state)
 	*state = s;
 }
 
-static void torture_setup_echo_srv_udp_ip(void **state, const char *ip)
+static void torture_setup_echo_srv_ip(void **state,
+				      const char *ip,
+				      int type)
 {
 	struct torture_state *s;
 	char start_echo_srv[1024] = {0};
+	const char *t;
 	int rc;
 
 	torture_setup_socket_dir(state);
 
 	s = *state;
 
+	switch (type) {
+	case SOCK_STREAM:
+		t = "-t";
+		break;
+	case SOCK_DGRAM:
+		t = "-u";
+		break;
+	default:
+		t = "";
+		break;
+	}
+
 	snprintf(start_echo_srv, sizeof(start_echo_srv),
-		 "%s/tests/echo_srv -b %s -D -u --pid %s",
-		 BINARYDIR, ip, s->srv_pidfile);
+		 "%s/tests/echo_srv -b %s -D %s --pid %s",
+		 BINARYDIR, ip, t, s->srv_pidfile);
 
 	rc = system(start_echo_srv);
 	assert_int_equal(rc, 0);
@@ -101,12 +117,12 @@ static void torture_setup_echo_srv_udp_ip(void **state, const char *ip)
 
 void torture_setup_echo_srv_udp_ipv4(void **state)
 {
-	torture_setup_echo_srv_udp_ip(state, TORTURE_ECHO_SRV_IPV4);
+	torture_setup_echo_srv_ip(state, TORTURE_ECHO_SRV_IPV4, SOCK_DGRAM);
 }
 
 void torture_setup_echo_srv_udp_ipv6(void **state)
 {
-	torture_setup_echo_srv_udp_ip(state, TORTURE_ECHO_SRV_IPV6);
+	torture_setup_echo_srv_ip(state, TORTURE_ECHO_SRV_IPV6, SOCK_DGRAM);
 }
 
 void torture_teardown_socket_dir(void **state)
