@@ -62,6 +62,9 @@ void torture_setup_socket_dir(void **state);
 void torture_setup_echo_srv_udp_ipv4(void **state);
 void torture_setup_echo_srv_udp_ipv6(void **state);
 
+void torture_setup_echo_srv_tcp_ipv4(void **state);
+void torture_setup_echo_srv_tcp_ipv6(void **state);
+
 void torture_teardown_socket_dir(void **state);
 void torture_teardown_echo_srv(void **state);
 

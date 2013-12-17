@@ -125,6 +125,20 @@ void torture_setup_echo_srv_udp_ipv6(void **state)
 	torture_setup_echo_srv_ip(state, TORTURE_ECHO_SRV_IPV6, SOCK_DGRAM);
 }
 
+void torture_setup_echo_srv_tcp_ipv4(void **state)
+{
+	torture_setup_echo_srv_ip(state,
+				      TORTURE_ECHO_SRV_IPV4,
+				      SOCK_STREAM);
+}
+
+void torture_setup_echo_srv_tcp_ipv6(void **state)
+{
+	torture_setup_echo_srv_ip(state,
+				      TORTURE_ECHO_SRV_IPV6,
+				      SOCK_STREAM);
+}
+
 void torture_teardown_socket_dir(void **state)
 {
 	struct torture_state *s = *state;
