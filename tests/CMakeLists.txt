@@ -17,7 +17,7 @@ target_link_libraries(${TORTURE_LIBRARY}
     ${CMOCKA_LIBRARY}
     ${SWRAP_REQUIRED_LIBRARIES})
 
-set(SWRAP_TESTS test_ioctl test_echo_udp_sendto_recvfrom test_echo_udp_send_recv)
+set(SWRAP_TESTS test_ioctl test_echo_udp_sendto_recvfrom test_echo_udp_send_recv test_echo_tcp_write_read)
 
 foreach(_SWRAP_TEST ${SWRAP_TESTS})
     add_cmocka_test(${_SWRAP_TEST} ${_SWRAP_TEST}.c ${TORTURE_LIBRARY})
