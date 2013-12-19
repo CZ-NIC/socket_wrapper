@@ -75,7 +75,7 @@ void torture_setup_socket_dir(void **state)
 	snprintf(s->srv_pidfile, len, "%s/%s", p, TORTURE_ECHO_SRV_PIDFILE);
 
 	setenv("SOCKET_WRAPPER_DIR", p, 1);
-	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "21", 1);
+	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "170", 1);
 
 	*state = s;
 }
@@ -105,6 +105,9 @@ static void torture_setup_echo_srv_ip(void **state,
 		break;
 	}
 
+	/* set default iface for the server */
+	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "10", 1);
+
 	snprintf(start_echo_srv, sizeof(start_echo_srv),
 		 "%s/tests/echo_srv -b %s -D %s --pid %s",
 		 BINARYDIR, ip, t, s->srv_pidfile);
@@ -113,6 +116,9 @@ static void torture_setup_echo_srv_ip(void **state,
 	assert_int_equal(rc, 0);
 
 	sleep(1);
+
+	/* set default iface for the client */
+	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "170", 1);
 }
 
 void torture_setup_echo_srv_udp_ipv4(void **state)
