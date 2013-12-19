@@ -1929,6 +1929,12 @@ static int swrap_socket(int family, int type, int protocol)
 	struct socket_info_fd *fi;
 	int fd;
 	int real_type = type;
+
+	/*
+	 * Remove possible addition flags passed to socket() so
+	 * do not fail checking the type.
+	 * See https://lwn.net/Articles/281965/
+	 */
 #ifdef SOCK_CLOEXEC
 	real_type &= ~SOCK_CLOEXEC;
 #endif
