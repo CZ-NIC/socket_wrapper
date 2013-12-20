@@ -1,17 +1,21 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
-#include <sys/socket.h>
+
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
-#include <resolv.h>
+
 #include <arpa/inet.h>
-#include <errno.h>
+#include <netinet/in.h>
 #include <netdb.h>
-#include <string.h>
+#include <resolv.h>
+
+#include <fcntl.h>
 #include <getopt.h>
 #include <unistd.h>
-#include <fcntl.h>
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #ifndef PIDFILE
