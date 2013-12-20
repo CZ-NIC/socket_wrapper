@@ -52,6 +52,34 @@
 #define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
 #define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
 
+const char *torture_server_address(int family)
+{
+	switch (family) {
+	case AF_INET: {
+		const char *ip4 = getenv("TORTURE_SERVER_ADDRESS_IPV4");
+
+		if (ip4 != NULL && ip4[0] != '\0') {
+			return ip4;
+		}
+
+		return TORTURE_ECHO_SRV_IPV4;
+	}
+	case AF_INET6: {
+		const char *ip6 = getenv("TORTURE_SERVER_ADDRESS_IPV6");
+
+		if (ip6 != NULL && ip6[0] != '\0') {
+			return ip6;
+		}
+
+		return TORTURE_ECHO_SRV_IPV6;
+	}
+	default:
+		return NULL;
+	}
+
+	return NULL;
+}
+
 void torture_setup_socket_dir(void **state)
 {
 	struct torture_state *s;

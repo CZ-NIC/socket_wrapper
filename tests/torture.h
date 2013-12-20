@@ -58,6 +58,8 @@ struct torture_state {
 #define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
 #endif
 
+const char *torture_server_address(int domain);
+
 void torture_setup_socket_dir(void **state);
 void torture_setup_echo_srv_udp_ipv4(void **state);
 void torture_setup_echo_srv_udp_ipv6(void **state);
