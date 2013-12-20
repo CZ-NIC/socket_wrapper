@@ -20,10 +20,12 @@ static void setup_echo_srv_tcp_ipv4(void **state)
 	torture_setup_echo_srv_tcp_ipv4(state);
 }
 
+#ifdef HAVE_IPV6
 static void setup_echo_srv_tcp_ipv6(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv6(state);
 }
+#endif
 
 static void teardown(void **state)
 {
