@@ -48,9 +48,11 @@ static void test_sendto_recvfrom_ipv4(void **state)
 
 	ZERO_STRUCT(sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(TORTURE_ECHO_SRV_PORT);
+	sin.sin_port = htons(torture_server_port());
 
-	rc = inet_pton(sin.sin_family, TORTURE_ECHO_SRV_IPV4, &sin.sin_addr);
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &sin.sin_addr);
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
@@ -79,7 +81,7 @@ static void test_sendto_recvfrom_ipv4(void **state)
 
 		a = inet_ntop(AF_INET, &srv_in.sin_addr, ip, sizeof(ip));
 		assert_non_null(a);
-		assert_string_equal(a, TORTURE_ECHO_SRV_IPV4);
+		assert_string_equal(a, torture_server_address(AF_INET));
 
 		assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
 	}
@@ -122,9 +124,11 @@ static void test_sendto_recvfrom_ipv6(void **state)
 
 	ZERO_STRUCT(sin6);
 	sin6.sin6_family = AF_INET6;
-	sin6.sin6_port = htons(TORTURE_ECHO_SRV_PORT);
+	sin6.sin6_port = htons(torture_server_port());
 
-	rc = inet_pton(AF_INET6, TORTURE_ECHO_SRV_IPV6, &sin6.sin6_addr);
+	rc = inet_pton(AF_INET6,
+		       torture_server_address(AF_INET6),
+		       &sin6.sin6_addr);
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
@@ -153,7 +157,7 @@ static void test_sendto_recvfrom_ipv6(void **state)
 
 		a = inet_ntop(AF_INET6, &srv_in6.sin6_addr, ip, sizeof(ip));
 		assert_non_null(a);
-		assert_string_equal(a, TORTURE_ECHO_SRV_IPV6);
+		assert_string_equal(a, torture_server_address(AF_INET6));
 
 		assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
 	}

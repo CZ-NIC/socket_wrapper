@@ -49,6 +49,11 @@
 #include <unistd.h>
 #include <time.h>
 
+#define TORTURE_ECHO_SRV_IPV4 "127.0.0.10"
+/* socket wrapper IPv6 prefix  fd00::5357:5fxx */
+#define TORTURE_ECHO_SRV_IPV6 "fd00::5357:5f0a"
+#define TORTURE_ECHO_SRV_PORT 7
+
 #define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
 #define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
 
@@ -125,6 +130,7 @@ void torture_setup_socket_dir(void **state)
 
 static void torture_setup_echo_srv_ip(void **state,
 				      const char *ip,
+				      int port,
 				      int type)
 {
 	struct torture_state *s;
@@ -152,8 +158,8 @@ static void torture_setup_echo_srv_ip(void **state,
 	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "10", 1);
 
 	snprintf(start_echo_srv, sizeof(start_echo_srv),
-		 "%s/tests/echo_srv -b %s -D %s --pid %s",
-		 BINARYDIR, ip, t, s->srv_pidfile);
+		 "%s/tests/echo_srv -b %s -p %d -D %s --pid %s",
+		 BINARYDIR, ip, port, t, s->srv_pidfile);
 
 	rc = system(start_echo_srv);
 	assert_int_equal(rc, 0);
@@ -166,22 +172,34 @@ static void torture_setup_echo_srv_ip(void **state,
 
 void torture_setup_echo_srv_udp_ipv4(void **state)
 {
-	torture_setup_echo_srv_ip(state, "0.0.0.0", SOCK_DGRAM);
+	torture_setup_echo_srv_ip(state,
+				  "0.0.0.0",
+				  torture_server_port(),
+				  SOCK_DGRAM);
 }
 
 void torture_setup_echo_srv_udp_ipv6(void **state)
 {
-	torture_setup_echo_srv_ip(state, "::", SOCK_DGRAM);
+	torture_setup_echo_srv_ip(state,
+				  "::",
+				  torture_server_port(),
+				  SOCK_DGRAM);
 }
 
 void torture_setup_echo_srv_tcp_ipv4(void **state)
 {
-	torture_setup_echo_srv_ip(state, "0.0.0.0", SOCK_STREAM);
+	torture_setup_echo_srv_ip(state,
+				  "0.0.0.0",
+				  torture_server_port(),
+				  SOCK_STREAM);
 }
 
 void torture_setup_echo_srv_tcp_ipv6(void **state)
 {
-	torture_setup_echo_srv_ip(state, "::", SOCK_STREAM);
+	torture_setup_echo_srv_ip(state,
+				  "::",
+				  torture_server_port(),
+				  SOCK_STREAM);
 }
 
 void torture_teardown_socket_dir(void **state)

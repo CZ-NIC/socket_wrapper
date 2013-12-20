@@ -1,0 +1,9 @@
+In this directory you can find all socket_wrapper tests. All tests can also be
+executed outside of the 'make test' environment and without socket_wrapper.
+
+This can be done with:
+
+TORTURE_SERVER_ADDRESS_IPV4="127.0.0.1" \
+TORTURE_SERVER_ADDRESS_IPV6="::1" \
+TORTURE_SERVER_PORT=7777 \
+./tests/test_echo_tcp_write_read

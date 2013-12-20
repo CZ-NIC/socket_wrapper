@@ -46,9 +46,11 @@ static void test_write_read_ipv4(void **state)
 
 	ZERO_STRUCT(sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(TORTURE_ECHO_SRV_PORT);
+	sin.sin_port = htons(torture_server_port());
 
-	rc = inet_pton(sin.sin_family, TORTURE_ECHO_SRV_IPV4, &sin.sin_addr);
+	rc = inet_pton(sin.sin_family,
+		       torture_server_address(AF_INET),
+		       &sin.sin_addr);
 	assert_int_equal(rc, 1);
 
 	rc = connect(s, (struct sockaddr *)&sin, slen);
@@ -93,9 +95,11 @@ static void test_write_read_ipv6(void **state)
 
 	ZERO_STRUCT(sin6);
 	sin6.sin6_family = AF_INET6;
-	sin6.sin6_port = htons(TORTURE_ECHO_SRV_PORT);
+	sin6.sin6_port = htons(torture_server_port());
 
-	rc = inet_pton(AF_INET6, TORTURE_ECHO_SRV_IPV6, &sin6.sin6_addr);
+	rc = inet_pton(AF_INET6,
+		       torture_server_address(AF_INET6),
+		       &sin6.sin6_addr);
 	assert_int_equal(rc, 1);
 
 	rc = connect(s, (struct sockaddr *)&sin6, slen);
