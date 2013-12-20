@@ -123,26 +123,22 @@ static void torture_setup_echo_srv_ip(void **state,
 
 void torture_setup_echo_srv_udp_ipv4(void **state)
 {
-	torture_setup_echo_srv_ip(state, TORTURE_ECHO_SRV_IPV4, SOCK_DGRAM);
+	torture_setup_echo_srv_ip(state, "0.0.0.0", SOCK_DGRAM);
 }
 
 void torture_setup_echo_srv_udp_ipv6(void **state)
 {
-	torture_setup_echo_srv_ip(state, TORTURE_ECHO_SRV_IPV6, SOCK_DGRAM);
+	torture_setup_echo_srv_ip(state, "::", SOCK_DGRAM);
 }
 
 void torture_setup_echo_srv_tcp_ipv4(void **state)
 {
-	torture_setup_echo_srv_ip(state,
-				      TORTURE_ECHO_SRV_IPV4,
-				      SOCK_STREAM);
+	torture_setup_echo_srv_ip(state, "0.0.0.0", SOCK_STREAM);
 }
 
 void torture_setup_echo_srv_tcp_ipv6(void **state)
 {
-	torture_setup_echo_srv_ip(state,
-				      TORTURE_ECHO_SRV_IPV6,
-				      SOCK_STREAM);
+	torture_setup_echo_srv_ip(state, "::", SOCK_STREAM);
 }
 
 void torture_teardown_socket_dir(void **state)
