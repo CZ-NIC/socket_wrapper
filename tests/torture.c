@@ -80,6 +80,21 @@ const char *torture_server_address(int family)
 	return NULL;
 }
 
+int torture_server_port(void)
+{
+	char *env = getenv("TORTURE_SERVER_PORT");
+
+	if (env != NULL && env[0] != '\0' && strlen(env) < 6) {
+		int port = atoi(env);
+
+		if (port > 0 && port < 65536) {
+			return port;
+		}
+	}
+
+	return TORTURE_ECHO_SRV_PORT;
+}
+
 void torture_setup_socket_dir(void **state)
 {
 	struct torture_state *s;

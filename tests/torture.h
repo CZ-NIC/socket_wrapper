@@ -59,6 +59,7 @@ struct torture_state {
 #endif
 
 const char *torture_server_address(int domain);
+int torture_server_port(void);
 
 void torture_setup_socket_dir(void **state);
 void torture_setup_echo_srv_udp_ipv4(void **state);
