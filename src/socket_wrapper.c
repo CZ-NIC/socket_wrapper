@@ -391,6 +391,7 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 		/* FALL TROUGH */
 	case SWRAP_LIBSOCKET:
 #ifdef HAVE_LIBSOCKET
+		handle = swrap.libsocket_handle;
 		if (handle == NULL) {
 			for (handle = NULL, i = 10; handle == NULL && i >= 0; i--) {
 				char soname[256] = {0};
@@ -400,13 +401,12 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 			}
 
 			swrap.libsocket_handle = handle;
-		} else {
-			handle = swrap.libsocket_handle;
 		}
 		break;
 #endif
 		/* FALL TROUGH */
 	case SWRAP_LIBC:
+		handle = swrap.libc_handle;
 		if (handle == NULL) {
 			for (handle = NULL, i = 10; handle == NULL && i >= 0; i--) {
 				char soname[256] = {0};
@@ -416,8 +416,6 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 			}
 
 			swrap.libc_handle = handle;
-		} else {
-			handle = swrap.libc_handle;
 		}
 		break;
 	}
