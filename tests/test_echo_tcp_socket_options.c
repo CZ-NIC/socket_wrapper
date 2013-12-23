@@ -42,9 +42,9 @@ static void test_sockopt_sndbuf(void **state)
 	struct sockaddr_in sin;
 	socklen_t slen = sizeof(struct sockaddr_in);
 	int obufsize = 0;
-	socklen_t olen = 0;
+	socklen_t olen = sizeof(obufsize);
 	int gbufsize = 0;
-	socklen_t glen = 0;
+	socklen_t glen = sizeof(gbufsize);
 	int sbufsize = 0;
 	int rc;
 	int s;
