@@ -216,14 +216,19 @@ void torture_setup_echo_srv_tcp_ipv6(void **state)
 void torture_teardown_socket_dir(void **state)
 {
 	struct torture_state *s = *state;
+	char *env = getenv("TORTURE_SKIP_CLEANUP");
 	char remove_cmd[1024] = {0};
 	int rc;
 
-	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", s->socket_dir);
+	if (env != NULL && env[0] == '1') {
+		fprintf(stderr, ">>> Skipping cleanup of %s", s->socket_dir);
+	} else {
+		snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", s->socket_dir);
 
-	rc = system(remove_cmd);
-	if (rc < 0) {
-		fprintf(stderr, "%s failed: %s", remove_cmd, strerror(errno));
+		rc = system(remove_cmd);
+		if (rc < 0) {
+			fprintf(stderr, "%s failed: %s", remove_cmd, strerror(errno));
+		}
 	}
 
 	free(s->socket_dir);
