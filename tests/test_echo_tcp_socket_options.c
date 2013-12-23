@@ -69,14 +69,15 @@ static void test_sockopt_sndbuf(void **state)
 	rc = getsockopt(s, SOL_SOCKET, SO_SNDBUF, &obufsize, &olen);
 	assert_int_equal(rc, 0);
 
-	sbufsize = ((obufsize + 1023) & (~1023));
+	/* request 4k, on Linux the kernel doubles the value */
+	sbufsize = 4096;
 	rc = setsockopt(s, SOL_SOCKET, SO_SNDBUF, &sbufsize, sizeof(sbufsize));
 	assert_int_equal(rc, 0);
 
 	rc = getsockopt(s, SOL_SOCKET, SO_SNDBUF, &gbufsize, &glen);
 	assert_int_equal(rc, 0);
 
-	assert_int_equal(gbufsize, sbufsize);
+	assert_true(sbufsize == gbufsize || sbufsize == gbufsize/2);
 
 	close(s);
 }
