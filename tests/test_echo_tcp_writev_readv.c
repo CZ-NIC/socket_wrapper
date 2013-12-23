@@ -59,7 +59,7 @@ static void test_writev_readv_ipv4(void **state)
 	rc = connect(s, (struct sockaddr *)&sin, slen);
 	assert_int_equal(rc, 0);
 
-	for (i = 0; i < 10; i++) {
+	for (i = 1; i < 10; i++) {
 		char send_buf[10][64];
 		char recv_buf[10][64];
 		struct iovec iov_send[10];
@@ -123,7 +123,7 @@ static void test_writev_readv_ipv6(void **state)
 	rc = connect(s, (struct sockaddr *)&sin6, slen);
 	assert_int_equal(rc, 0);
 
-	for (i = 0; i < 10; i++) {
+	for (i = 1; i < 10; i++) {
 		char send_buf[10][64];
 		char recv_buf[10][64];
 		struct iovec iov_send[10];
