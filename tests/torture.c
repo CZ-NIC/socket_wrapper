@@ -56,6 +56,7 @@
 
 #define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
 #define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
+#define TORTURE_PCAP_FILE "socket_trace.pcap"
 
 const char *torture_server_address(int family)
 {
@@ -115,6 +116,15 @@ void torture_setup_socket_dir(void **state)
 	p = mkdtemp(s->socket_dir);
 	assert_non_null(p);
 
+	/* pcap file */
+	len = strlen(p) + 1 + strlen(TORTURE_PCAP_FILE) + 1;
+
+	s->pcap_file = malloc(len);
+	assert_non_null(s->pcap_file);
+
+	snprintf(s->pcap_file, len, "%s/%s", p, TORTURE_PCAP_FILE);
+
+	/* pid file */
 	len = strlen(p) + 1 + strlen(TORTURE_ECHO_SRV_PIDFILE) + 1;
 
 	s->srv_pidfile = malloc(len);
@@ -124,6 +134,7 @@ void torture_setup_socket_dir(void **state)
 
 	setenv("SOCKET_WRAPPER_DIR", p, 1);
 	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "170", 1);
+	setenv("SOCKET_WRAPPER_PCAP_FILE", s->pcap_file, 1);
 
 	*state = s;
 }
@@ -216,6 +227,7 @@ void torture_teardown_socket_dir(void **state)
 	}
 
 	free(s->socket_dir);
+	free(s->pcap_file);
 	free(s->srv_pidfile);
 	free(s);
 }

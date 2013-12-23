@@ -46,6 +46,7 @@
 
 struct torture_state {
 	char *socket_dir;
+	char *pcap_file;
 	char *srv_pidfile;
 };
 
