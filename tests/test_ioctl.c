@@ -69,8 +69,10 @@ static void test_swrap_socket(void **state)
 static void test_swrap_ioctl_sock(void **state)
 {
 	int fd;
+#ifdef SIOCGPGRP
 	int rc;
 	int grp = -127;
+#endif
 
 	(void) state; /* unused */
 
