@@ -2814,6 +2814,55 @@ static void swrap_sendmsg_after(struct socket_info *si,
 	errno = saved_errno;
 }
 
+static int swrap_recvmsg_before(int fd,
+				struct socket_info *si,
+				struct msghdr *msg,
+				struct iovec *tmp_iov)
+{
+	size_t i, len = 0;
+	ssize_t ret;
+
+	switch (si->type) {
+	case SOCK_STREAM:
+		if (!si->connected) {
+			errno = ENOTCONN;
+			return -1;
+		}
+
+		if (msg->msg_iovlen == 0) {
+			break;
+		}
+
+		for (i=0; i < msg->msg_iovlen; i++) {
+			size_t nlen;
+			nlen = len + msg->msg_iov[i].iov_len;
+			if (nlen > SOCKET_MAX_PACKET) {
+				break;
+			}
+		}
+		msg->msg_iovlen = i;
+		if (msg->msg_iovlen == 0) {
+			*tmp_iov = msg->msg_iov[0];
+			tmp_iov->iov_len = MIN(tmp_iov->iov_len, SOCKET_MAX_PACKET);
+			msg->msg_iov = tmp_iov;
+			msg->msg_iovlen = 1;
+		}
+		break;
+
+	case SOCK_DGRAM:
+		if (si->bound == 0) {
+			ret = swrap_auto_bind(fd, si, si->family);
+			if (ret == -1) return -1;
+		}
+		break;
+	default:
+		errno = EHOSTUNREACH;
+		return -1;
+	}
+
+	return 0;
+}
+
 /****************************************************************************
  *   RECVFROM
  ***************************************************************************/
