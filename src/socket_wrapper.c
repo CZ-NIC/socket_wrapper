@@ -2863,6 +2863,84 @@ static int swrap_recvmsg_before(int fd,
 	return 0;
 }
 
+static int swrap_recvmsg_after(struct socket_info *si,
+			       struct msghdr *msg,
+			       const struct sockaddr_un *un_addr,
+			       socklen_t un_addrlen,
+			       struct sockaddr *from,
+			       socklen_t *fromlen,
+			       ssize_t ret)
+{
+	int saved_errno = errno;
+	size_t i;
+	uint8_t *buf;
+	off_t ofs = 0;
+	size_t avail = 0;
+	size_t remain;
+
+	/* to give better errors */
+	if (ret == -1 && saved_errno == ENOENT) {
+		saved_errno = EHOSTUNREACH;
+	}
+
+	for (i=0; i < msg->msg_iovlen; i++) {
+		avail += msg->msg_iov[i].iov_len;
+	}
+
+	if (ret == -1) {
+		remain = MIN(80, avail);
+	} else {
+		remain = ret;
+	}
+
+	/* we capture it as one single packet */
+	buf = (uint8_t *)malloc(remain);
+	if (!buf) {
+		/* we just not capture the packet */
+		errno = saved_errno;
+		return -1;
+	}
+
+	for (i=0; i < msg->msg_iovlen; i++) {
+		size_t this_time = MIN(remain, msg->msg_iov[i].iov_len);
+		memcpy(buf + ofs,
+		       msg->msg_iov[i].iov_base,
+		       this_time);
+		ofs += this_time;
+		remain -= this_time;
+	}
+
+	switch (si->type) {
+	case SOCK_STREAM:
+		if (ret == -1 && saved_errno != EAGAIN && saved_errno != ENOBUFS) {
+			swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
+		} else if (ret == 0) { /* END OF FILE */
+			swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
+		} else if (ret > 0) {
+			swrap_dump_packet(si, NULL, SWRAP_RECV, buf, ret);
+		}
+		break;
+
+	case SOCK_DGRAM:
+		if (ret == -1) {
+			break;
+		}
+
+		swrap_dump_packet(si, from, SWRAP_RECVFROM, buf, ret);
+
+		if (sockaddr_convert_from_un(si, un_addr, un_addrlen,
+					     si->family, from, fromlen) == -1) {
+			return -1;
+		}
+
+		break;
+	}
+
+	free(buf);
+	errno = saved_errno;
+	return 0;
+}
+
 /****************************************************************************
  *   RECVFROM
  ***************************************************************************/
