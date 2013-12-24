@@ -2954,6 +2954,9 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 	struct socket_info *si = find_socket_info(s);
 	struct sockaddr_storage ss;
 	socklen_t ss_len = sizeof(ss);
+	struct msghdr msg;
+	struct iovec tmp;
+	int tret;
 
 	if (!si) {
 		return libc_recvfrom(s,
@@ -2969,9 +2972,22 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 		fromlen = &ss_len;
 	}
 
-	if (si->type == SOCK_STREAM) {
-		len = MIN(len, SOCKET_MAX_PACKET);
-	}
+	tmp.iov_base = buf;
+	tmp.iov_len = len;
+
+	msg.msg_name = NULL;           /* optional address */
+	msg.msg_namelen = 0;           /* size of address */
+	msg.msg_iov = &tmp;            /* scatter/gather array */
+	msg.msg_iovlen = 1;            /* # elements in msg_iov */
+	msg.msg_control = NULL;        /* ancillary data, see below */
+	msg.msg_controllen = 0;        /* ancillary data buffer len */
+	msg.msg_flags = 0;             /* flags on received message */
+
+	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
+	if (tret == -1) return -1;
+
+	buf = msg.msg_iov[0].iov_base;
+	len = msg.msg_iov[0].iov_len;
 
 	/* irix 6.4 forgets to null terminate the sun_path string :-( */
 	memset(&un_addr, 0, sizeof(un_addr));
@@ -2981,15 +2997,20 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 			    flags,
 			    (struct sockaddr *)(void *)&un_addr,
 			    &un_addrlen);
-	if (ret == -1) 
+	if (ret == -1) {
 		return ret;
-
-	if (sockaddr_convert_from_un(si, &un_addr, un_addrlen,
-				     si->family, from, fromlen) == -1) {
-		return -1;
 	}
 
-	swrap_dump_packet(si, from, SWRAP_RECVFROM, buf, ret);
+	tret = swrap_recvmsg_after(si,
+			           &msg,
+				   &un_addr,
+				   un_addrlen,
+				   from,
+				   fromlen,
+				   ret);
+	if (tret != 0) {
+		return tret;
+	}
 
 	return ret;
 }
