@@ -3168,24 +3168,42 @@ ssize_t recv(int s, void *buf, size_t len, int flags)
 
 static ssize_t swrap_read(int s, void *buf, size_t len)
 {
+	struct socket_info *si;
+	struct msghdr msg;
+	struct iovec tmp;
 	ssize_t ret;
-	struct socket_info *si = find_socket_info(s);
+	int tret;
 
-	if (!si) {
+	si = find_socket_info(s);
+	if (si == NULL) {
 		return libc_read(s, buf, len);
 	}
 
-	if (si->type == SOCK_STREAM) {
-		len = MIN(len, SOCKET_MAX_PACKET);
+	tmp.iov_base = buf;
+	tmp.iov_len = len;
+
+	msg.msg_name = NULL;           /* optional address */
+	msg.msg_namelen = 0;           /* size of address */
+	msg.msg_iov = &tmp;            /* scatter/gather array */
+	msg.msg_iovlen = 1;            /* # elements in msg_iov */
+	msg.msg_control = NULL;        /* ancillary data, see below */
+	msg.msg_controllen = 0;        /* ancillary data buffer len */
+	msg.msg_flags = 0;             /* flags on received message */
+
+	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
+	if (tret == -1) {
+		SWRAP_LOG(SWRAP_LOG_ERROR, "swrap_recvmsg_before failed");
+		return -1;
 	}
 
+	buf = msg.msg_iov[0].iov_base;
+	len = msg.msg_iov[0].iov_len;
+
 	ret = libc_read(s, buf, len);
-	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
-		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
-	} else if (ret == 0) { /* END OF FILE */
-		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
-	} else if (ret > 0) {
-		swrap_dump_packet(si, NULL, SWRAP_RECV, buf, ret);
+
+	tret = swrap_recvmsg_after(si, &msg, NULL, 0, NULL, NULL, ret);
+	if (tret != 0) {
+		return tret;
 	}
 
 	return ret;
