@@ -37,6 +37,10 @@
 #define discard_const_p(type, ptr) ((type *)discard_const(ptr))
 #endif
 
+#ifndef ZERO_STRUCT
+#define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
+#endif
+
 struct echo_srv_opts {
     int port;
     int socktype;
@@ -187,20 +191,218 @@ static int setup_srv(struct echo_srv_opts *opts, int *_sock)
     return 0;
 }
 
+static int socket_dup(int s)
+{
+    struct sockaddr_storage cli_ss1;
+    socklen_t cli_ss1_len;
+    struct sockaddr_storage srv_ss1;
+    socklen_t srv_ss1_len;
+
+    struct sockaddr_storage cli_ss2;
+    socklen_t cli_ss2_len;
+    struct sockaddr_storage srv_ss2;
+    socklen_t srv_ss2_len;
+
+    struct sockaddr_storage cli_ss3;
+    socklen_t cli_ss3_len;
+    struct sockaddr_storage srv_ss3;
+    socklen_t srv_ss3_len;
+
+    int s2;
+    int rc;
+
+    ZERO_STRUCT(srv_ss1);
+    srv_ss1_len = sizeof(srv_ss1);
+    rc = getsockname(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+    if (rc == -1) {
+        perror("getsockname");
+        return -1;
+    }
+
+    ZERO_STRUCT(cli_ss1);
+    cli_ss1_len = sizeof(cli_ss1);
+    rc = getpeername(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+    if (rc == -1) {
+        perror("getpeername");
+        return -1;
+    }
+
+    if (cli_ss1.ss_family != srv_ss1.ss_family) {
+        perror("client/server family mismatch");
+        return -1;
+    }
+
+    /* Test dup */
+    s2 = dup(s);
+    if (s2 == -1) {
+        perror("dup");
+        return -1;
+    }
+    close(s);
+
+    ZERO_STRUCT(srv_ss2);
+    srv_ss2_len = sizeof(srv_ss2);
+    rc = getsockname(s2, (struct sockaddr *)&srv_ss2, &srv_ss2_len);
+    if (rc == -1) {
+        perror("getsockname");
+        return -1;
+    }
+
+    ZERO_STRUCT(cli_ss2);
+    cli_ss2_len = sizeof(cli_ss2);
+    rc = getpeername(s2, (struct sockaddr *)&cli_ss2, &cli_ss2_len);
+    if (rc == -1) {
+        perror("getpeername");
+        return -1;
+    }
+
+    if (cli_ss1_len != cli_ss2_len ||
+        srv_ss1_len != srv_ss2_len) {
+        perror("length mismatch");
+        return -1;
+    }
+
+    switch(cli_ss1.ss_family) {
+    case AF_INET: {
+        struct sockaddr_in *cli_sinp1 = (struct sockaddr_in *)&cli_ss1;
+        struct sockaddr_in *cli_sinp2 = (struct sockaddr_in *)&cli_ss2;
+
+        struct sockaddr_in *srv_sinp1 = (struct sockaddr_in *)&srv_ss1;
+        struct sockaddr_in *srv_sinp2 = (struct sockaddr_in *)&srv_ss2;
+
+        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in));
+        if (rc != 0) {
+            perror("client mismatch");
+        }
+
+        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in));
+        if (rc != 0) {
+            perror("server mismatch");
+        }
+        break;
+    }
+    case AF_INET6: {
+        struct sockaddr_in6 *cli_sinp1 = (struct sockaddr_in6 *)&cli_ss1;
+        struct sockaddr_in6 *cli_sinp2 = (struct sockaddr_in6 *)&cli_ss2;
+
+        struct sockaddr_in6 *srv_sinp1 = (struct sockaddr_in6 *)&srv_ss1;
+        struct sockaddr_in6 *srv_sinp2 = (struct sockaddr_in6 *)&srv_ss2;
+
+        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in6));
+        if (rc != 0) {
+            perror("client mismatch");
+        }
+
+        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in6));
+        if (rc != 0) {
+            perror("server mismatch");
+        }
+        break;
+    }
+    default:
+        perror("family mismatch");
+        return -1;
+    }
+
+    /* Test dup2 */
+    s = dup2(s2, s);
+    if (s == -1) {
+        perror("dup");
+        return -1;
+    }
+    close(s2);
+
+    ZERO_STRUCT(srv_ss3);
+    srv_ss3_len = sizeof(srv_ss3);
+    rc = getsockname(s, (struct sockaddr *)&srv_ss3, &srv_ss3_len);
+    if (rc == -1) {
+        perror("getsockname");
+        return -1;
+    }
+
+    ZERO_STRUCT(cli_ss3);
+    cli_ss3_len = sizeof(cli_ss3);
+    rc = getpeername(s, (struct sockaddr *)&cli_ss3, &cli_ss3_len);
+    if (rc == -1) {
+        perror("getpeername");
+        return -1;
+    }
+
+    if (cli_ss2_len != cli_ss3_len ||
+        srv_ss2_len != srv_ss3_len) {
+        perror("length mismatch");
+        return -1;
+    }
+
+    switch(cli_ss2.ss_family) {
+    case AF_INET: {
+        struct sockaddr_in *cli_sinp1 = (struct sockaddr_in *)&cli_ss2;
+        struct sockaddr_in *cli_sinp2 = (struct sockaddr_in *)&cli_ss3;
+
+        struct sockaddr_in *srv_sinp1 = (struct sockaddr_in *)&srv_ss2;
+        struct sockaddr_in *srv_sinp2 = (struct sockaddr_in *)&srv_ss3;
+
+        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in));
+        if (rc != 0) {
+            perror("client mismatch");
+        }
+
+        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in));
+        if (rc != 0) {
+            perror("server mismatch");
+        }
+        break;
+    }
+    case AF_INET6: {
+        struct sockaddr_in6 *cli_sinp1 = (struct sockaddr_in6 *)&cli_ss2;
+        struct sockaddr_in6 *cli_sinp2 = (struct sockaddr_in6 *)&cli_ss3;
+
+        struct sockaddr_in6 *srv_sinp1 = (struct sockaddr_in6 *)&srv_ss2;
+        struct sockaddr_in6 *srv_sinp2 = (struct sockaddr_in6 *)&srv_ss3;
+
+        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in6));
+        if (rc != 0) {
+            perror("client mismatch");
+        }
+
+        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in6));
+        if (rc != 0) {
+            perror("server mismatch");
+        }
+        break;
+    }
+    default:
+        perror("family mismatch");
+        return -1;
+    }
+
+    return s;
+}
+
 static void echo_tcp(int sock)
 {
-    int client_sock;
     struct sockaddr_storage css;
     socklen_t addrlen = sizeof(css);
-    ssize_t bret;
-    char buf[BUFSIZE];
 
-    client_sock = accept(sock, (struct sockaddr *) &css, &addrlen);
-    if (client_sock == -1) {
+    char buf[BUFSIZE];
+    ssize_t bret;
+
+    int client_sock;
+    int s;
+
+    s = accept(sock, (struct sockaddr *)&css, &addrlen);
+    if (s == -1) {
         perror("accept");
         return;
     }
 
+    client_sock = socket_dup(s);
+    if (client_sock == -1) {
+        perror("socket_dup");
+        return;
+    }
+
+    /* Start ping pong */
     while (1) {
         bret = recv(client_sock, buf, BUFSIZE, 0);
         if (bret == -1) {
