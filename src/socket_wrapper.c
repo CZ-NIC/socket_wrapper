@@ -2822,6 +2822,8 @@ static int swrap_recvmsg_before(int fd,
 	size_t i, len = 0;
 	ssize_t ret;
 
+	(void)fd; /* unused */
+
 	switch (si->type) {
 	case SOCK_STREAM:
 		if (!si->connected) {
@@ -2850,9 +2852,20 @@ static int swrap_recvmsg_before(int fd,
 		break;
 
 	case SOCK_DGRAM:
+		if (msg->msg_name == NULL) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		if (msg->msg_iovlen == 0) {
+			break;
+		}
+
 		if (si->bound == 0) {
 			ret = swrap_auto_bind(fd, si, si->family);
-			if (ret == -1) return -1;
+			if (ret == -1) {
+				return -1;
+			}
 		}
 		break;
 	default:
@@ -2867,8 +2880,6 @@ static int swrap_recvmsg_after(struct socket_info *si,
 			       struct msghdr *msg,
 			       const struct sockaddr_un *un_addr,
 			       socklen_t un_addrlen,
-			       struct sockaddr *from,
-			       socklen_t *fromlen,
 			       ssize_t ret)
 {
 	int saved_errno = errno;
@@ -2885,6 +2896,11 @@ static int swrap_recvmsg_after(struct socket_info *si,
 
 	for (i=0; i < msg->msg_iovlen; i++) {
 		avail += msg->msg_iov[i].iov_len;
+	}
+
+	if (avail == 0) {
+		errno = saved_errno;
+		return 0;
 	}
 
 	if (ret == -1) {
@@ -2926,11 +2942,30 @@ static int swrap_recvmsg_after(struct socket_info *si,
 			break;
 		}
 
-		swrap_dump_packet(si, from, SWRAP_RECVFROM, buf, ret);
+		if (un_addr != NULL) {
+			int rc;
 
-		if (sockaddr_convert_from_un(si, un_addr, un_addrlen,
-					     si->family, from, fromlen) == -1) {
-			return -1;
+			rc = sockaddr_convert_from_un(si,
+						      un_addr,
+						      un_addrlen,
+						      si->family,
+						      msg->msg_name,
+						      &msg->msg_namelen);
+			if (rc == -1) {
+				return -1;
+			}
+
+			swrap_dump_packet(si,
+					  msg->msg_name,
+					  SWRAP_RECVFROM,
+					  buf,
+					  ret);
+		} else {
+			swrap_dump_packet(si,
+					  msg->msg_name,
+					  SWRAP_RECV,
+					  buf,
+					  ret);
 		}
 
 		break;
@@ -2948,8 +2983,8 @@ static int swrap_recvmsg_after(struct socket_info *si,
 static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 			      struct sockaddr *from, socklen_t *fromlen)
 {
-	struct sockaddr_un un_addr;
-	socklen_t un_addrlen = sizeof(un_addr);
+	struct sockaddr_un from_addr;
+	socklen_t from_addrlen = sizeof(from_addr);
 	ssize_t ret;
 	struct socket_info *si = find_socket_info(s);
 	struct sockaddr_storage ss;
@@ -2967,16 +3002,17 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 				     fromlen);
 	}
 
-	if (!from) {
-		from = (struct sockaddr *)(void *)&ss;
-		fromlen = &ss_len;
+	if (from != NULL && fromlen != NULL) {
+		msg.msg_name = from;   /* optional address */
+		msg.msg_namelen = *fromlen; /* size of address */
+	} else {
+		msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
+		msg.msg_namelen = ss_len; /* size of address */
 	}
 
 	tmp.iov_base = buf;
 	tmp.iov_len = len;
 
-	msg.msg_name = NULL;           /* optional address */
-	msg.msg_namelen = 0;           /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
 	msg.msg_control = NULL;        /* ancillary data, see below */
@@ -2984,32 +3020,36 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 	msg.msg_flags = 0;             /* flags on received message */
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (tret == -1) return -1;
+	if (tret == -1) {
+		return -1;
+	}
 
 	buf = msg.msg_iov[0].iov_base;
 	len = msg.msg_iov[0].iov_len;
 
 	/* irix 6.4 forgets to null terminate the sun_path string :-( */
-	memset(&un_addr, 0, sizeof(un_addr));
+	memset(&from_addr, 0, sizeof(from_addr));
 	ret = libc_recvfrom(s,
 			    buf,
 			    len,
 			    flags,
-			    (struct sockaddr *)(void *)&un_addr,
-			    &un_addrlen);
+			    (struct sockaddr *)(void *)&from_addr,
+			    &from_addrlen);
 	if (ret == -1) {
 		return ret;
 	}
 
 	tret = swrap_recvmsg_after(si,
 			           &msg,
-				   &un_addr,
-				   un_addrlen,
-				   from,
-				   fromlen,
+				   &from_addr,
+				   from_addrlen,
 				   ret);
 	if (tret != 0) {
 		return tret;
+	}
+
+	if (from != NULL && fromlen != NULL) {
+		*fromlen = msg.msg_namelen;
 	}
 
 	return ret;
@@ -3118,6 +3158,8 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 {
 	struct socket_info *si;
 	struct msghdr msg;
+	struct sockaddr_storage ss;
+	socklen_t ss_len = sizeof(ss);
 	struct iovec tmp;
 	ssize_t ret;
 	int tret;
@@ -3130,16 +3172,16 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 	tmp.iov_base = buf;
 	tmp.iov_len = len;
 
-	msg.msg_name = NULL;           /* optional address */
-	msg.msg_namelen = 0;           /* size of address */
+	msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
+	msg.msg_namelen = ss_len;      /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
 
-	ret = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (ret == -1) {
+	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
+	if (tret == -1) {
 		SWRAP_LOG(SWRAP_LOG_ERROR, "swrap_recvmsg_before failed");
 		return -1;
 	}
@@ -3149,7 +3191,7 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 
 	ret = libc_recv(s, buf, len, flags);
 
-	tret = swrap_recvmsg_after(si, &msg, NULL, 0, NULL, NULL, ret);
+	tret = swrap_recvmsg_after(si, &msg, NULL, 0, ret);
 	if (tret != 0) {
 		return tret;
 	}
@@ -3171,6 +3213,8 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 	struct socket_info *si;
 	struct msghdr msg;
 	struct iovec tmp;
+	struct sockaddr_storage ss;
+	socklen_t ss_len = sizeof(ss);
 	ssize_t ret;
 	int tret;
 
@@ -3182,8 +3226,8 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 	tmp.iov_base = buf;
 	tmp.iov_len = len;
 
-	msg.msg_name = NULL;           /* optional address */
-	msg.msg_namelen = 0;           /* size of address */
+	msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
+	msg.msg_namelen = ss_len;      /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
 	msg.msg_control = NULL;        /* ancillary data, see below */
@@ -3201,7 +3245,7 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 
 	ret = libc_read(s, buf, len);
 
-	tret = swrap_recvmsg_after(si, &msg, NULL, 0, NULL, NULL, ret);
+	tret = swrap_recvmsg_after(si, &msg, NULL, 0, ret);
 	if (tret != 0) {
 		return tret;
 	}
