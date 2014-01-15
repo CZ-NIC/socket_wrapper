@@ -313,6 +313,7 @@ struct swrap_libc_fns {
 			     int flags,
 			     struct sockaddr *src_addr,
 			     socklen_t *addrlen);
+	int (*libc_recvmsg)(int sockfd, const struct msghdr *msg, int flags);
 	int (*libc_send)(int sockfd, const void *buf, size_t len, int flags);
 	int (*libc_sendmsg)(int sockfd, const struct msghdr *msg, int flags);
 	int (*libc_sendto)(int sockfd,
@@ -601,6 +602,13 @@ static int libc_recvfrom(int sockfd,
 	swrap_load_lib_function(SWRAP_LIBSOCKET, recvfrom);
 
 	return swrap.fns.libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+}
+
+static int libc_recvmsg(int sockfd, struct msghdr *msg, int flags)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, recvmsg);
+
+	return swrap.fns.libc_recvmsg(sockfd, msg, flags);
 }
 
 static int libc_send(int sockfd, const void *buf, size_t len, int flags)
@@ -3310,7 +3318,48 @@ ssize_t send(int s, const void *buf, size_t len, int flags)
  *   RECVMSG
  ***************************************************************************/
 
-/* TODO */
+static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
+{
+	struct sockaddr_un from_addr;
+	socklen_t from_addrlen = sizeof(from_addr);
+	struct socket_info *si;
+	struct msghdr msg;
+	struct iovec tmp;
+
+	ssize_t ret;
+	int rc;
+
+	si = find_socket_info(s);
+	if (si == NULL) {
+		return libc_recvmsg(s, omsg, flags);
+	}
+
+	rc = swrap_recvmsg_before(s, si, omsg, &tmp);
+	if (rc == -1) {
+		return -1;
+	}
+
+	msg = *omsg;
+	tmp.iov_base = msg.msg_iov;
+	tmp.iov_len = msg.msg_iovlen;
+
+	msg.msg_name = (struct sockaddr *)&from_addr;
+	msg.msg_namelen = from_addrlen;
+
+	ret = libc_recvmsg(s, &msg, flags);
+
+	rc = swrap_recvmsg_after(si, omsg, &from_addr, from_addrlen, ret);
+	if (rc != 0) {
+		return rc;
+	}
+
+	return ret;
+}
+
+ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
+{
+	return swrap_recvmsg(sockfd, msg, flags);
+}
 
 /****************************************************************************
  *   SENDMSG
