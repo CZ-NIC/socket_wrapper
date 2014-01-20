@@ -47,6 +47,17 @@ find_package(Threads)
 include(ConfigureChecks.cmake)
 configure_file(config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
+# pkg-config file
+configure_file(socket_wrapper.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/socket_wrapper.pc @ONLY)
+install(
+  FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/socket_wrapper.pc
+  DESTINATION
+    ${LIB_INSTALL_DIR}/pkgconfig
+  COMPONENT
+    pkgconfig
+)
+
 # check subdirectories
 add_subdirectory(src)
 
