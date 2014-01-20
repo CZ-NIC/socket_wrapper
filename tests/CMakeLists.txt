@@ -24,7 +24,8 @@ set(SWRAP_TESTS
     test_echo_tcp_write_read
     test_echo_tcp_writev_readv
     test_echo_udp_sendto_recvfrom
-    test_echo_udp_send_recv)
+    test_echo_udp_send_recv
+    test_echo_udp_sendmsg_recvmsg)
 
 foreach(_SWRAP_TEST ${SWRAP_TESTS})
     add_cmocka_test(${_SWRAP_TEST} ${_SWRAP_TEST}.c ${TORTURE_LIBRARY})
