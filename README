@@ -1,18 +1,29 @@
 Socket wrapper library
 =======================
 
-This library passes all socket communication over unix domain sockets if the
-environment variable SOCKET_WRAPPER_DIR is set.
+This library makes possible to run several instances of the full software stack
+on the same machine and perform locally functional testing of complex network
+configurations. It passes all socket communication over unix domain sockets.
 
-To use socket_wrapper the following environment variables need to be set:
-LD_PRELOAD=libsocket_wrapper.so
-SOCKET_WRAPPER_DIR=/path/to/socket_dir
+The user defines a directory where to put all the unix sockets using the
+envionment variable "SOCKET_WRAPPER_DIR=/path/to/socket_dir". When a server
+opens a port or a client wants to connect, socket_wrapper will translate IP
+addresses to a special socket_wrapper name and look for the relevant unix
+socket in the SOCKET_WRAPPER_DIR.
 
-On MacOSX it is:
-DYLD_INSERT_LIBRARIES=libsocket_wrapper.dylib
-SOCKET_WRAPPER_DIR=/path/to/socket_dir
+Additionally, the default interface to be used by an application is defined
+with "SOCKET_WRAPPER_DEFAULT_IFACE=<ID>" where <ID> is between 2 and 254. This
+is analogous to use the IPv4 addresses "127.0.0.<ID>" or IPv6 addresses
+"fd00::5357:5f<IDx>" (where <IDx> is a hexadecimal presentation of <ID>). You
+should always set the default interface. If you listen on INADDR_ANY then it
+will use the default interface to listen on.
 
-The following environment variables could be set:
+Exmaple: 
+LD_PRELOAD=libsocket_wrapper.so \
+SOCKET_WRAPPER_DIR=/path/to/socket_dir \
+./mydaemon
+
+The following environment variables could also be set:
 
 SOCKET_WRAPPER_DEFAULT_IFACE
     The default interface to use if nothing has
