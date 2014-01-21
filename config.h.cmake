@@ -16,6 +16,9 @@
 
 #cmakedefine HAVE_SYS_FILIO_H 1
 
+/************************ STRUCT MEMBERS *************************/
+
+#cmakedefine HAVE_STRUCT_SOCKADDR_SA_LEN 1
 
 /*************************** FUNCTIONS ***************************/
 
@@ -30,6 +33,7 @@
 #cmakedefine HAVE_GETTIMEOFDAY_TZ_VOID 1
 
 /*************************** DATA TYPES***************************/
+
 #cmakedefine SIZEOF_PID_T @SIZEOF_PID_T@
 
 /**************************** OPTIONS ****************************/
