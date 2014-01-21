@@ -2668,7 +2668,7 @@ static ssize_t swrap_sendmsg_before(int fd,
 			break;
 		}
 
-		for (i=0; i < msg->msg_iovlen; i++) {
+		for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
 			size_t nlen;
 			nlen = len + msg->msg_iov[i].iov_len;
 			if (nlen > SOCKET_MAX_PACKET) {
@@ -2767,7 +2767,7 @@ static void swrap_sendmsg_after(struct socket_info *si,
 		saved_errno = EHOSTUNREACH;
 	}
 
-	for (i=0; i < msg->msg_iovlen; i++) {
+	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
 		avail += msg->msg_iov[i].iov_len;
 	}
 
@@ -2785,7 +2785,7 @@ static void swrap_sendmsg_after(struct socket_info *si,
 		return;
 	}
 
-	for (i=0; i < msg->msg_iovlen; i++) {
+	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
 		size_t this_time = MIN(remain, msg->msg_iov[i].iov_len);
 		memcpy(buf + ofs,
 		       msg->msg_iov[i].iov_base,
@@ -2843,7 +2843,7 @@ static int swrap_recvmsg_before(int fd,
 			break;
 		}
 
-		for (i=0; i < msg->msg_iovlen; i++) {
+		for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
 			size_t nlen;
 			nlen = len + msg->msg_iov[i].iov_len;
 			if (nlen > SOCKET_MAX_PACKET) {
@@ -2902,7 +2902,7 @@ static int swrap_recvmsg_after(struct socket_info *si,
 		saved_errno = EHOSTUNREACH;
 	}
 
-	for (i=0; i < msg->msg_iovlen; i++) {
+	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
 		avail += msg->msg_iov[i].iov_len;
 	}
 
@@ -2925,7 +2925,7 @@ static int swrap_recvmsg_after(struct socket_info *si,
 		return -1;
 	}
 
-	for (i=0; i < msg->msg_iovlen; i++) {
+	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
 		size_t this_time = MIN(remain, msg->msg_iov[i].iov_len);
 		memcpy(buf + ofs,
 		       msg->msg_iov[i].iov_base,
@@ -3409,7 +3409,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 		size_t avail = 0;
 		size_t remain;
 
-		for (i=0; i < msg.msg_iovlen; i++) {
+		for (i = 0; i < (size_t)msg.msg_iovlen; i++) {
 			avail += msg.msg_iov[i].iov_len;
 		}
 
@@ -3422,7 +3422,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 			return -1;
 		}
 
-		for (i=0; i < msg.msg_iovlen; i++) {
+		for (i = 0; i < (size_t)msg.msg_iovlen; i++) {
 			size_t this_time = MIN(remain, msg.msg_iov[i].iov_len);
 			memcpy(buf + ofs,
 			       msg.msg_iov[i].iov_base,
