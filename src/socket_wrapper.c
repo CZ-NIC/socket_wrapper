@@ -2781,7 +2781,7 @@ static void swrap_sendmsg_after(struct socket_info *si,
 	}
 
 	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
-		size_t this_time = MIN(remain, msg->msg_iov[i].iov_len);
+		size_t this_time = MIN(remain, (size_t)msg->msg_iov[i].iov_len);
 		memcpy(buf + ofs,
 		       msg->msg_iov[i].iov_base,
 		       this_time);
@@ -2921,7 +2921,7 @@ static int swrap_recvmsg_after(struct socket_info *si,
 	}
 
 	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
-		size_t this_time = MIN(remain, msg->msg_iov[i].iov_len);
+		size_t this_time = MIN(remain, (size_t)msg->msg_iov[i].iov_len);
 		memcpy(buf + ofs,
 		       msg->msg_iov[i].iov_base,
 		       this_time);
@@ -3379,7 +3379,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 {
 	struct msghdr msg;
 	struct iovec tmp;
-	struct sockaddr_un un_addr = {0};
+	struct sockaddr_un un_addr;
 	const struct sockaddr_un *to_un = NULL;
 	const struct sockaddr *to = NULL;
 	ssize_t ret;
@@ -3389,6 +3389,8 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 	if (!si) {
 		return libc_sendmsg(s, omsg, flags);
 	}
+
+	ZERO_STRUCT(un_addr);
 
 	tmp.iov_base = NULL;
 	tmp.iov_len = 0;
@@ -3432,7 +3434,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 		}
 
 		for (i = 0; i < (size_t)msg.msg_iovlen; i++) {
-			size_t this_time = MIN(remain, msg.msg_iov[i].iov_len);
+			size_t this_time = MIN(remain, (size_t)msg.msg_iov[i].iov_len);
 			memcpy(buf + ofs,
 			       msg.msg_iov[i].iov_base,
 			       this_time);
@@ -3531,7 +3533,7 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 		}
 
 		for (i=0; i < count; i++) {
-			size_t this_time = MIN(remain, vector[i].iov_len);
+			size_t this_time = MIN(remain, (size_t)vector[i].iov_len);
 			memcpy(buf + ofs,
 			       vector[i].iov_base,
 			       this_time);
