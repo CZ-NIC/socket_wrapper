@@ -3010,6 +3010,10 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 				     fromlen);
 	}
 
+	tmp.iov_base = buf;
+	tmp.iov_len = len;
+
+	ZERO_STRUCT(msg);
 	if (from != NULL && fromlen != NULL) {
 		msg.msg_name = from;   /* optional address */
 		msg.msg_namelen = *fromlen; /* size of address */
@@ -3017,15 +3021,13 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 		msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
 		msg.msg_namelen = ss_len; /* size of address */
 	}
-
-	tmp.iov_base = buf;
-	tmp.iov_len = len;
-
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
+#endif
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
 	if (tret == -1) {
@@ -3101,7 +3103,7 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 	msg.msg_namelen = tolen;       /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
-#if 0 /* not available on solaris */
+#if HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
@@ -3180,13 +3182,16 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 	tmp.iov_base = buf;
 	tmp.iov_len = len;
 
+	ZERO_STRUCT(msg);
 	msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
 	msg.msg_namelen = ss_len;      /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
+#endif
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
 	if (tret == -1) {
@@ -3234,13 +3239,16 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 	tmp.iov_base = buf;
 	tmp.iov_len = len;
 
+	ZERO_STRUCT(msg);
 	msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
 	msg.msg_namelen = ss_len;      /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
+#endif
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
 	if (tret == -1) {
@@ -3290,7 +3298,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	msg.msg_namelen = 0;           /* size of address */
 	msg.msg_iov = &tmp;            /* scatter/gather array */
 	msg.msg_iovlen = 1;            /* # elements in msg_iov */
-#if 0 /* not available on solaris */
+#if HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
@@ -3339,12 +3347,19 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 		return -1;
 	}
 
-	msg = *omsg;
-	tmp.iov_base = msg.msg_iov;
-	tmp.iov_len = msg.msg_iovlen;
+	ZERO_STRUCT(msg);
+	msg.msg_name = (struct sockaddr *)&from_addr; /* optional address */
+	msg.msg_namelen = from_addrlen;            /* size of address */
+	msg.msg_iov = omsg->msg_iov;               /* scatter/gather array */
+	msg.msg_iovlen = omsg->msg_iovlen;         /* # elements in msg_iov */
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	msg.msg_control = omsg->msg_control;       /* ancillary data, see below */
+	msg.msg_controllen = omsg->msg_controllen; /* ancillary data buffer len */
+	msg.msg_flags = omsg->msg_flags;           /* flags on received message */
+#endif
 
-	msg.msg_name = (struct sockaddr *)&from_addr;
-	msg.msg_namelen = from_addrlen;
+	tmp.iov_base = omsg->msg_iov;
+	tmp.iov_len = omsg->msg_iovlen;
 
 	ret = libc_recvmsg(s, &msg, flags);
 
@@ -3380,20 +3395,19 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 		return libc_sendmsg(s, omsg, flags);
 	}
 
-	tmp.iov_base = NULL;
-	tmp.iov_len = 0;
-
-	msg = *omsg;
-#if 0
+	ZERO_STRUCT(msg);
 	msg.msg_name = omsg->msg_name;             /* optional address */
 	msg.msg_namelen = omsg->msg_namelen;       /* size of address */
 	msg.msg_iov = omsg->msg_iov;               /* scatter/gather array */
 	msg.msg_iovlen = omsg->msg_iovlen;         /* # elements in msg_iov */
-	/* the following is not available on solaris */
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = omsg->msg_control;       /* ancillary data, see below */
 	msg.msg_controllen = omsg->msg_controllen; /* ancillary data buffer len */
 	msg.msg_flags = omsg->msg_flags;           /* flags on received message */
 #endif
+
+	tmp.iov_base = omsg->msg_iov;
+	tmp.iov_len = omsg->msg_iovlen;
 
 	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, &to_un, &to, &bcast);
 	if (ret == -1) return -1;
@@ -3566,7 +3580,7 @@ static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 	msg.msg_namelen = 0;           /* size of address */
 	msg.msg_iov = discard_const_p(struct iovec, vector); /* scatter/gather array */
 	msg.msg_iovlen = count;        /* # elements in msg_iov */
-#if 0 /* not available on solaris */
+#if HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	msg.msg_control = NULL;        /* ancillary data, see below */
 	msg.msg_controllen = 0;        /* ancillary data buffer len */
 	msg.msg_flags = 0;             /* flags on received message */
