@@ -3379,7 +3379,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 {
 	struct msghdr msg;
 	struct iovec tmp;
-	struct sockaddr_un un_addr;
+	struct sockaddr_un un_addr = {0};
 	const struct sockaddr_un *to_un = NULL;
 	const struct sockaddr *to = NULL;
 	ssize_t ret;
