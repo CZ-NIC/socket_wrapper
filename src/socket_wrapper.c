@@ -1463,7 +1463,10 @@ static uint8_t *swrap_packet_init(struct timeval *tval,
 	}
 
 	base = (uint8_t *)malloc(alloc_len);
-	if (!base) return NULL;
+	if (base == NULL) {
+		return NULL;
+	}
+	memset(base, 0x0, alloc_len);
 
 	buf = base;
 
