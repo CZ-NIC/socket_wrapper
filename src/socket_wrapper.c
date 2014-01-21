@@ -3342,10 +3342,8 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 		return libc_recvmsg(s, omsg, flags);
 	}
 
-	rc = swrap_recvmsg_before(s, si, omsg, &tmp);
-	if (rc == -1) {
-		return -1;
-	}
+	tmp.iov_base = NULL;
+	tmp.iov_len = 0;
 
 	ZERO_STRUCT(msg);
 	msg.msg_name = (struct sockaddr *)&from_addr; /* optional address */
@@ -3358,8 +3356,10 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 	msg.msg_flags = omsg->msg_flags;           /* flags on received message */
 #endif
 
-	tmp.iov_base = omsg->msg_iov;
-	tmp.iov_len = omsg->msg_iovlen;
+	rc = swrap_recvmsg_before(s, si, &msg, &tmp);
+	if (rc == -1) {
+		return -1;
+	}
 
 	ret = libc_recvmsg(s, &msg, flags);
 
@@ -3395,6 +3395,9 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 		return libc_sendmsg(s, omsg, flags);
 	}
 
+	tmp.iov_base = NULL;
+	tmp.iov_len = 0;
+
 	ZERO_STRUCT(msg);
 	msg.msg_name = omsg->msg_name;             /* optional address */
 	msg.msg_namelen = omsg->msg_namelen;       /* size of address */
@@ -3405,9 +3408,6 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 	msg.msg_controllen = omsg->msg_controllen; /* ancillary data buffer len */
 	msg.msg_flags = omsg->msg_flags;           /* flags on received message */
 #endif
-
-	tmp.iov_base = omsg->msg_iov;
-	tmp.iov_len = omsg->msg_iovlen;
 
 	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, &to_un, &to, &bcast);
 	if (ret == -1) return -1;
