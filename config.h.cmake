@@ -19,6 +19,7 @@
 /************************ STRUCT MEMBERS *************************/
 
 #cmakedefine HAVE_STRUCT_SOCKADDR_SA_LEN 1
+#cmakedefine HAVE_STRUCT_MSGHDR_MSG_CONTROL 1
 
 /*************************** FUNCTIONS ***************************/
 
