@@ -20,6 +20,10 @@
 #cmakedefine HAVE_SYS_TIMERFD_H 1
 #cmakedefine HAVE_GNU_LIB_NAMES_H 1
 
+/**************************** STRUCTS ****************************/
+
+#cmakedefine HAVE_STRUCT_IN6_PKTINFO 1
+
 /************************ STRUCT MEMBERS *************************/
 
 #cmakedefine HAVE_STRUCT_SOCKADDR_SA_LEN 1

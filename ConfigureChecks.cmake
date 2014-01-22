@@ -81,6 +81,11 @@ endif (UNIX)
 
 set(SWRAP_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} CACHE INTERNAL "socket_wrapper required system libraries")
 
+# STRUCTS
+set(CMAKE_REQUIRED_FLAGS -D_GNU_SOURCE)
+check_struct_has_member("struct in6_pktinfo" ipi6_addr "sys/types.h;sys/socket.h;netinet/in.h" HAVE_STRUCT_IN6_PKTINFO)
+set(CMAKE_REQUIRED_FLAGS)
+
 # STRUCT MEMBERS
 check_struct_has_member("struct sockaddr" sa_len "sys/types.h;sys/socket.h;netinet/in.h" HAVE_STRUCT_SOCKADDR_SA_LEN)
 check_struct_has_member("struct msghdr" msg_control "sys/types.h;sys/socket.h" HAVE_STRUCT_MSGHDR_MSG_CONTROL)
