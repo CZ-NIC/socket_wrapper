@@ -2936,7 +2936,20 @@ static int swrap_recvmsg_before(int fd,
 		if (si->bound == 0) {
 			ret = swrap_auto_bind(fd, si, si->family);
 			if (ret == -1) {
-				return -1;
+				/*
+				 * When attempting to read or write to a
+				 * descriptor, if an underlying autobind fails
+				 * because it's not a socket, stop intercepting
+				 * uses of that descriptor.
+				 */
+				if (errno == ENOTSOCK) {
+					swrap_remove_stale(fd);
+					return -ENOTSOCK;
+				} else {
+					SWRAP_LOG(SWRAP_LOG_ERROR,
+						  "swrap_recvmsg_before failed");
+					return -1;
+				}
 			}
 		}
 		break;
@@ -3094,7 +3107,7 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 #endif
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (tret == -1) {
+	if (tret < 0) {
 		return -1;
 	}
 
@@ -3261,8 +3274,7 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 #endif
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (tret == -1) {
-		SWRAP_LOG(SWRAP_LOG_ERROR, "swrap_recvmsg_before failed");
+	if (tret < 0) {
 		return -1;
 	}
 
@@ -3318,8 +3330,10 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 #endif
 
 	tret = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (tret == -1) {
-		SWRAP_LOG(SWRAP_LOG_ERROR, "swrap_recvmsg_before failed");
+	if (tret < 0) {
+		if (tret == -ENOTSOCK) {
+			return libc_read(s, buf, len);
+		}
 		return -1;
 	}
 
@@ -3427,7 +3441,7 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 #endif
 
 	rc = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (rc == -1) {
+	if (rc < 0) {
 		return -1;
 	}
 
@@ -3586,7 +3600,10 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 #endif
 
 	rc = swrap_recvmsg_before(s, si, &msg, &tmp);
-	if (rc == -1) {
+	if (rc < 0) {
+		if (rc == -ENOTSOCK) {
+			return libc_readv(s, vector, count);
+		}
 		return -1;
 	}
 
