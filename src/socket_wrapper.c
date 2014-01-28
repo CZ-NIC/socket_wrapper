@@ -297,6 +297,7 @@ struct swrap_libc_fns {
 	int (*libc_ioctl)(int d, unsigned long int request, ...);
 	int (*libc_listen)(int sockfd, int backlog);
 	int (*libc_open)(const char *pathname, int flags, mode_t mode);
+	int (*libc_pipe)(int pipefd[2]);
 	int (*libc_read)(int fd, void *buf, size_t count);
 	ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
 	int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
@@ -569,6 +570,13 @@ static int libc_open(const char *pathname, int flags, mode_t mode)
 	swrap_load_lib_function(SWRAP_LIBC, open);
 
 	return swrap.fns.libc_open(pathname, flags, mode);
+}
+
+static int libc_pipe(int pipefd[2])
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, pipe);
+
+	return swrap.fns.libc_pipe(pipefd);
 }
 
 static int libc_read(int fd, void *buf, size_t count)
@@ -2065,6 +2073,28 @@ static int swrap_socket(int family, int type, int protocol)
 int socket(int family, int type, int protocol)
 {
 	return swrap_socket(family, type, protocol);
+}
+
+/****************************************************************************
+ *   PIPE
+ ***************************************************************************/
+
+static int swrap_pipe(int pipefd[2])
+{
+	int rc;
+
+	rc = libc_pipe(pipefd);
+	if (rc != -1) {
+		swrap_remove_stale(pipefd[0]);
+		swrap_remove_stale(pipefd[1]);
+	}
+
+	return rc;
+}
+
+int pipe(int pipefd[2])
+{
+	return swrap_pipe(pipefd);
 }
 
 /****************************************************************************
