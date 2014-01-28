@@ -50,6 +50,7 @@ endif(CMAKE_COMPILER_IS_GNUCC AND NOT MINGW AND NOT OS2)
 check_include_file(sys/filio.h HAVE_SYS_FILIO_H)
 check_include_file(sys/signalfd.h HAVE_SYS_SIGNALFD_H)
 check_include_file(sys/eventfd.h HAVE_SYS_EVENTFD_H)
+check_include_file(sys/timerfd.h HAVE_SYS_TIMERFD_H)
 
 # FUNCTIONS
 check_function_exists(strncpy HAVE_STRNCPY)
@@ -57,6 +58,7 @@ check_function_exists(vsnprintf HAVE_VSNPRINTF)
 check_function_exists(snprintf HAVE_SNPRINTF)
 check_function_exists(signalfd HAVE_SIGNALFD)
 check_function_exists(eventfd HAVE_EVENTFD)
+check_function_exists(timerfd_create HAVE_TIMERFD_CREATE)
 
 if (UNIX)
     if (NOT LINUX)

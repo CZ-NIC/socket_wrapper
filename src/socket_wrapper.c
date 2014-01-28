@@ -56,6 +56,9 @@
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>
 #endif
+#ifdef HAVE_SYS_TIMERFD_H
+#include <sys/timerfd.h>
+#endif
 #include <sys/uio.h>
 #include <errno.h>
 #include <sys/un.h>
@@ -335,6 +338,9 @@ struct swrap_libc_fns {
 #endif
 	int (*libc_socket)(int domain, int type, int protocol);
 	int (*libc_socketpair)(int domain, int type, int protocol, int sv[2]);
+#ifdef HAVE_TIMERFD_CREATE
+	int (*libc_timerfd_create)(int clockid, int flags);
+#endif
 	ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
 };
 
@@ -700,6 +706,15 @@ static int libc_socketpair(int domain, int type, int protocol, int sv[2])
 
 	return swrap.fns.libc_socketpair(domain, type, protocol, sv);
 }
+
+#ifdef HAVE_TIMERFD_CREATE
+static int libc_timerfd_create(int clockid, int flags)
+{
+	swrap_load_lib_function(SWRAP_LIBC, timerfd_create);
+
+	return swrap.fns.libc_timerfd_create(clockid, flags);
+}
+#endif
 
 static ssize_t libc_writev(int fd, const struct iovec *iov, int iovcnt)
 {
@@ -2157,6 +2172,29 @@ int socketpair(int family, int type, int protocol, int sv[2])
 {
 	return swrap_socketpair(family, type, protocol, sv);
 }
+
+/****************************************************************************
+ *   SOCKETPAIR
+ ***************************************************************************/
+
+#ifdef HAVE_TIMERFD_CREATE
+static int swrap_timerfd_create(int clockid, int flags)
+{
+	int fd;
+
+	fd = libc_timerfd_create(clockid, flags);
+	if (fd != -1) {
+		swrap_remove_stale(fd);
+	}
+
+	return fd;
+}
+
+int timerfd_create(int clockid, int flags)
+{
+	return swrap_timerfd_create(clockid, flags);
+}
+#endif
 
 /****************************************************************************
  *   PIPE
