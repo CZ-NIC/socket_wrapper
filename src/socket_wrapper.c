@@ -322,6 +322,7 @@ struct swrap_libc_fns {
 			       const void *optval,
 			       socklen_t optlen);
 	int (*libc_socket)(int domain, int type, int protocol);
+	int (*libc_socketpair)(int domain, int type, int protocol, int sv[2]);
 	ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
 };
 
@@ -661,6 +662,13 @@ static int libc_socket(int domain, int type, int protocol)
 	swrap_load_lib_function(SWRAP_LIBSOCKET, socket);
 
 	return swrap.fns.libc_socket(domain, type, protocol);
+}
+
+static int libc_socketpair(int domain, int type, int protocol, int sv[2])
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, socketpair);
+
+	return swrap.fns.libc_socketpair(domain, type, protocol, sv);
 }
 
 static ssize_t libc_writev(int fd, const struct iovec *iov, int iovcnt)
@@ -2073,6 +2081,28 @@ static int swrap_socket(int family, int type, int protocol)
 int socket(int family, int type, int protocol)
 {
 	return swrap_socket(family, type, protocol);
+}
+
+/****************************************************************************
+ *   SOCKETPAIR
+ ***************************************************************************/
+
+static int swrap_socketpair(int family, int type, int protocol, int sv[2])
+{
+	int rc;
+
+	rc = libc_socketpair(family, type, protocol, sv);
+	if (rc != -1) {
+		swrap_remove_stale(sv[0]);
+		swrap_remove_stale(sv[1]);
+	}
+
+	return rc;
+}
+
+int socketpair(int family, int type, int protocol, int sv[2])
+{
+	return swrap_socketpair(family, type, protocol, sv);
 }
 
 /****************************************************************************
