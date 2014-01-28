@@ -2967,7 +2967,8 @@ static int swrap_recvmsg_before(int fd,
 	return 0;
 }
 
-static int swrap_recvmsg_after(struct socket_info *si,
+static int swrap_recvmsg_after(int fd,
+			       struct socket_info *si,
 			       struct msghdr *msg,
 			       const struct sockaddr_un *un_addr,
 			       socklen_t un_addrlen,
@@ -2981,8 +2982,13 @@ static int swrap_recvmsg_after(struct socket_info *si,
 	size_t remain;
 
 	/* to give better errors */
-	if (ret == -1 && saved_errno == ENOENT) {
-		saved_errno = EHOSTUNREACH;
+	if (ret == -1) {
+		if (saved_errno == ENOENT) {
+			saved_errno = EHOSTUNREACH;
+		} else if (saved_errno == ENOTSOCK) {
+			/* If the fd is not a socket, remove it */
+			swrap_remove_stale(fd);
+		}
 	}
 
 	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
@@ -3132,8 +3138,9 @@ static ssize_t swrap_recvfrom(int s, void *buf, size_t len, int flags,
 		return ret;
 	}
 
-	tret = swrap_recvmsg_after(si,
-			           &msg,
+	tret = swrap_recvmsg_after(s,
+				   si,
+				   &msg,
 				   &from_addr,
 				   from_addrlen,
 				   ret);
@@ -3289,7 +3296,7 @@ static ssize_t swrap_recv(int s, void *buf, size_t len, int flags)
 
 	ret = libc_recv(s, buf, len, flags);
 
-	tret = swrap_recvmsg_after(si, &msg, NULL, 0, ret);
+	tret = swrap_recvmsg_after(s, si, &msg, NULL, 0, ret);
 	if (tret != 0) {
 		return tret;
 	}
@@ -3348,7 +3355,7 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 
 	ret = libc_read(s, buf, len);
 
-	tret = swrap_recvmsg_after(si, &msg, NULL, 0, ret);
+	tret = swrap_recvmsg_after(s, si, &msg, NULL, 0, ret);
 	if (tret != 0) {
 		return tret;
 	}
@@ -3453,7 +3460,7 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 
 	ret = libc_recvmsg(s, &msg, flags);
 
-	rc = swrap_recvmsg_after(si, omsg, &from_addr, from_addrlen, ret);
+	rc = swrap_recvmsg_after(s, si, omsg, &from_addr, from_addrlen, ret);
 	if (rc != 0) {
 		return rc;
 	}
@@ -3615,7 +3622,7 @@ static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 
 	ret = libc_readv(s, msg.msg_iov, msg.msg_iovlen);
 
-	rc = swrap_recvmsg_after(si, &msg, NULL, 0, ret);
+	rc = swrap_recvmsg_after(s, si, &msg, NULL, 0, ret);
 	if (rc != 0) {
 		return rc;
 	}
