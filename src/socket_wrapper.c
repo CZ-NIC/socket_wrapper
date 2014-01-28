@@ -2109,6 +2109,10 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 
 	ret = libc_accept(s, (struct sockaddr *)(void *)&un_addr, &un_addrlen);
 	if (ret == -1) {
+		if (errno == ENOTSOCK) {
+			/* Remove stale fds */
+			swrap_remove_stale(s);
+		}
 		free(my_addr);
 		return ret;
 	}
