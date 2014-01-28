@@ -296,6 +296,7 @@ struct swrap_libc_fns {
 			       socklen_t *optlen);
 	int (*libc_ioctl)(int d, unsigned long int request, ...);
 	int (*libc_listen)(int sockfd, int backlog);
+	int (*libc_open)(const char *pathname, int flags, mode_t mode);
 	int (*libc_read)(int fd, void *buf, size_t count);
 	ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
 	int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
@@ -561,6 +562,13 @@ static int libc_listen(int sockfd, int backlog)
 	swrap_load_lib_function(SWRAP_LIBSOCKET, listen);
 
 	return swrap.fns.libc_listen(sockfd, backlog);
+}
+
+static int libc_open(const char *pathname, int flags, mode_t mode)
+{
+	swrap_load_lib_function(SWRAP_LIBC, open);
+
+	return swrap.fns.libc_open(pathname, flags, mode);
 }
 
 static int libc_read(int fd, void *buf, size_t count)
@@ -1093,6 +1101,27 @@ static struct socket_info *find_socket_info(int fd)
 	}
 
 	return NULL;
+}
+
+static void swrap_remove_stale(int fd)
+{
+	struct socket_info *si = find_socket_info(fd);
+	struct socket_info_fd *fi;
+
+	if (si != NULL) {
+		for (fi = si->fds; fi; fi = fi->next) {
+			if (fi->fd == fd) {
+				SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
+				SWRAP_DLIST_REMOVE(si->fds, fi);
+				free(fi);
+				break;
+			}
+		}
+
+		if (si->fds == NULL) {
+			SWRAP_DLIST_REMOVE(sockets, si);
+		}
+	}
 }
 
 static int sockaddr_convert_to_un(struct socket_info *si,
@@ -2432,6 +2461,38 @@ static int swrap_listen(int s, int backlog)
 int listen(int s, int backlog)
 {
 	return swrap_listen(s, backlog);
+}
+
+/****************************************************************************
+ *   OPEN
+ ***************************************************************************/
+
+static int swrap_open(const char *pathname, int flags, mode_t mode)
+{
+	int ret;
+
+	ret = libc_open(pathname, flags, mode);
+	if (ret != -1) {
+		/*
+		 * There are methods for closing descriptors (libc-internal code
+		 * paths, direct syscalls) which close descriptors in ways that
+		 * we can't intercept, so try to recover when we notice that
+		 * that's happened
+		 */
+		swrap_remove_stale(ret);
+	}
+	return ret;
+}
+
+int open(const char *pathname, int flags, ...)
+{
+	mode_t mode;
+	va_list ap;
+
+	va_start(ap, flags);
+	mode = va_arg(ap, mode_t);
+	va_end(ap);
+	return swrap_open(pathname, flags, mode);
 }
 
 /****************************************************************************
