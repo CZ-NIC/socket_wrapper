@@ -2023,7 +2023,15 @@ static int swrap_socket(int family, int type, int protocol)
 	 */
 	fd = libc_socket(AF_UNIX, type, 0);
 
-	if (fd == -1) return -1;
+	if (fd == -1) {
+		return -1;
+	}
+
+	/* Check if we have a stale fd and remove it */
+	si = find_socket_info(fd);
+	if (si != NULL) {
+		swrap_remove_stale(fd);
+	}
 
 	si = (struct socket_info *)malloc(sizeof(struct socket_info));
 	memset(si, 0, sizeof(struct socket_info));
