@@ -3480,69 +3480,43 @@ ssize_t sendmsg(int s, const struct msghdr *omsg, int flags)
 
 static ssize_t swrap_readv(int s, const struct iovec *vector, int count)
 {
+	struct socket_info *si;
+	struct msghdr msg;
+	struct iovec tmp;
+	struct sockaddr_storage ss;
+	socklen_t ss_len = sizeof(ss);
 	ssize_t ret;
-	struct socket_info *si = find_socket_info(s);
-	struct iovec v;
+	int rc;
 
-	if (!si) {
+	si = find_socket_info(s);
+	if (si == NULL) {
 		return libc_readv(s, vector, count);
 	}
 
-	if (!si->connected) {
-		errno = ENOTCONN;
+	tmp.iov_base = NULL;
+	tmp.iov_len = 0;
+
+	ZERO_STRUCT(msg);
+	msg.msg_name = (struct sockaddr *)(void *)&ss; /* optional address */
+	msg.msg_namelen = ss_len;      /* size of address */
+	msg.msg_iov = discard_const_p(struct iovec, vector); /* scatter/gather array */
+	msg.msg_iovlen = count;        /* # elements in msg_iov */
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	msg.msg_control = NULL;        /* ancillary data, see below */
+	msg.msg_controllen = 0;        /* ancillary data buffer len */
+	msg.msg_flags = 0;             /* flags on received message */
+#endif
+
+	rc = swrap_recvmsg_before(s, si, &msg, &tmp);
+	if (rc == -1) {
 		return -1;
 	}
 
-	if (si->type == SOCK_STREAM && count > 0) {
-		int i;
-		size_t len = 0;
+	ret = libc_readv(s, msg.msg_iov, msg.msg_iovlen);
 
-		for (i = 0; i < count; i++) {
-			size_t nlen;
-			nlen = len + vector[i].iov_len;
-			if (nlen > SOCKET_MAX_PACKET) {
-				break;
-			}
-		}
-		count = i;
-		if (count == 0) {
-			v = vector[0];
-			v.iov_len = MIN(v.iov_len, SOCKET_MAX_PACKET);
-			vector = &v;
-			count = 1;
-		}
-	}
-
-	ret = libc_readv(s, vector, count);
-	if (ret == -1 && errno != EAGAIN && errno != ENOBUFS) {
-		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
-	} else if (ret == 0) { /* END OF FILE */
-		swrap_dump_packet(si, NULL, SWRAP_RECV_RST, NULL, 0);
-	} else if (ret > 0) {
-		uint8_t *buf;
-		off_t ofs = 0;
-		int i;
-		size_t remain = ret;
-
-		/* we capture it as one single packet */
-		buf = (uint8_t *)malloc(ret);
-		if (!buf) {
-			/* we just not capture the packet */
-			errno = 0;
-			return ret;
-		}
-
-		for (i=0; i < count; i++) {
-			size_t this_time = MIN(remain, (size_t)vector[i].iov_len);
-			memcpy(buf + ofs,
-			       vector[i].iov_base,
-			       this_time);
-			ofs += this_time;
-			remain -= this_time;
-		}
-
-		swrap_dump_packet(si, NULL, SWRAP_RECV, buf, ret);
-		free(buf);
+	rc = swrap_recvmsg_after(si, &msg, NULL, 0, ret);
+	if (rc != 0) {
+		return rc;
 	}
 
 	return ret;
