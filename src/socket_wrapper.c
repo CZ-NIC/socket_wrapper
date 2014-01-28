@@ -2772,7 +2772,15 @@ static ssize_t swrap_sendmsg_before(int fd,
 
 		if (si->bound == 0) {
 			ret = swrap_auto_bind(fd, si, si->family);
-			if (ret == -1) return -1;
+			if (ret == -1) {
+				if (errno == ENOTSOCK) {
+					swrap_remove_stale(fd);
+					return -ENOTSOCK;
+				} else {
+					SWRAP_LOG(SWRAP_LOG_ERROR, "swrap_sendmsg_before failed");
+					return -1;
+				}
+			}
 		}
 
 		if (!si->defer_connect) {
@@ -3144,6 +3152,7 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 	struct sockaddr_un un_addr;
 	const struct sockaddr_un *to_un = NULL;
 	ssize_t ret;
+	int rc;
 	struct socket_info *si = find_socket_info(s);
 	int bcast = 0;
 
@@ -3165,8 +3174,10 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 	msg.msg_flags = 0;             /* flags on received message */
 #endif
 
-	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, &to_un, &to, &bcast);
-	if (ret == -1) return -1;
+	rc = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, &to_un, &to, &bcast);
+	if (rc < 0) {
+		return -1;
+	}
 
 	buf = msg.msg_iov[0].iov_base;
 	len = msg.msg_iov[0].iov_len;
@@ -3340,6 +3351,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	struct iovec tmp;
 	struct sockaddr_un un_addr;
 	ssize_t ret;
+	int rc;
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
@@ -3360,8 +3372,10 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 	msg.msg_flags = 0;             /* flags on received message */
 #endif
 
-	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, NULL, NULL, NULL);
-	if (ret == -1) return -1;
+	rc = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, NULL, NULL, NULL);
+	if (rc < 0) {
+		return -1;
+	}
 
 	buf = msg.msg_iov[0].iov_base;
 	len = msg.msg_iov[0].iov_len;
@@ -3444,6 +3458,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 	const struct sockaddr_un *to_un = NULL;
 	const struct sockaddr *to = NULL;
 	ssize_t ret;
+	int rc;
 	struct socket_info *si = find_socket_info(s);
 	int bcast = 0;
 
@@ -3467,8 +3482,10 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 	msg.msg_flags = omsg->msg_flags;           /* flags on received message */
 #endif
 
-	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, &to_un, &to, &bcast);
-	if (ret == -1) return -1;
+	rc = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, &to_un, &to, &bcast);
+	if (rc < 0) {
+		return -1;
+	}
 
 	if (bcast) {
 		struct stat st;
@@ -3598,6 +3615,7 @@ static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 	struct iovec tmp;
 	struct sockaddr_un un_addr;
 	ssize_t ret;
+	int rc;
 	struct socket_info *si = find_socket_info(s);
 
 	if (!si) {
@@ -3618,8 +3636,13 @@ static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 	msg.msg_flags = 0;             /* flags on received message */
 #endif
 
-	ret = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, NULL, NULL, NULL);
-	if (ret == -1) return -1;
+	rc = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, NULL, NULL, NULL);
+	if (rc < 0) {
+		if (rc == -ENOTSOCK) {
+			return libc_readv(s, vector, count);
+		}
+		return -1;
+	}
 
 	ret = libc_writev(s, msg.msg_iov, msg.msg_iovlen);
 
