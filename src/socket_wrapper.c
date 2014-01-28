@@ -53,6 +53,9 @@
 #ifdef HAVE_SYS_SIGNALFD_H
 #include <sys/signalfd.h>
 #endif
+#ifdef HAVE_SYS_EVENTFD_H
+#include <sys/eventfd.h>
+#endif
 #include <sys/uio.h>
 #include <errno.h>
 #include <sys/un.h>
@@ -286,6 +289,9 @@ struct swrap_libc_fns {
 			    socklen_t addrlen);
 	int (*libc_dup)(int fd);
 	int (*libc_dup2)(int oldfd, int newfd);
+#ifdef HAVE_EVENTFD
+	int (*libc_eventfd)(int count, int flags);
+#endif
 	int (*libc_getpeername)(int sockfd,
 				struct sockaddr *addr,
 				socklen_t *addrlen);
@@ -513,6 +519,15 @@ static int libc_dup2(int oldfd, int newfd)
 
 	return swrap.fns.libc_dup2(oldfd, newfd);
 }
+
+#ifdef HAVE_EVENTFD
+static int libc_eventfd(int count, int flags)
+{
+	swrap_load_lib_function(SWRAP_LIBC, eventfd);
+
+	return swrap.fns.libc_eventfd(count, flags);
+}
+#endif
 
 static int libc_getpeername(int sockfd,
 			    struct sockaddr *addr,
@@ -3933,6 +3948,29 @@ int dup2(int fd, int newfd)
 {
 	return swrap_dup2(fd, newfd);
 }
+
+/****************************
+ * DUP2
+ ***************************/
+
+#ifdef HAVE_EVENTFD
+static int swrap_eventfd(int count, int flags)
+{
+	int fd;
+
+	fd = libc_eventfd(count, flags);
+	if (fd != -1) {
+		swrap_remove_stale(fd);
+	}
+
+	return fd;
+}
+
+int eventfd(int count, int flags)
+{
+	return swrap_eventfd(count, flags);
+}
+#endif
 
 /****************************
  * DESTRUCTOR
