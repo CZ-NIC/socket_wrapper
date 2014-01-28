@@ -15,6 +15,7 @@
 /************************** HEADER FILES *************************/
 
 #cmakedefine HAVE_SYS_FILIO_H 1
+#cmakedefine HAVE_SYS_SIGNALFD_H 1
 
 /************************ STRUCT MEMBERS *************************/
 
@@ -25,6 +26,8 @@
 
 /* Define to 1 if you have the `getaddrinfo' function. */
 #cmakedefine HAVE_GETADDRINFO 1
+#cmakedefine HAVE_SIGNALFD 1
+
 #cmakedefine HAVE_ACCEPT_PSOCKLEN_T 1
 #cmakedefine HAVE_IOCTL_INT 1
 

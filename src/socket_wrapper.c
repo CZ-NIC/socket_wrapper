@@ -50,6 +50,9 @@
 #ifdef HAVE_SYS_FILIO_H
 #include <sys/filio.h>
 #endif
+#ifdef HAVE_SYS_SIGNALFD_H
+#include <sys/signalfd.h>
+#endif
 #include <sys/uio.h>
 #include <errno.h>
 #include <sys/un.h>
@@ -321,6 +324,9 @@ struct swrap_libc_fns {
 			       int optname,
 			       const void *optval,
 			       socklen_t optlen);
+#ifdef HAVE_SIGNALFD
+	int (*libc_signalfd)(int fd, const sigset_t *mask, int flags);
+#endif
 	int (*libc_socket)(int domain, int type, int protocol);
 	int (*libc_socketpair)(int domain, int type, int protocol, int sv[2]);
 	ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
@@ -656,6 +662,15 @@ static int libc_setsockopt(int sockfd,
 
 	return swrap.fns.libc_setsockopt(sockfd, level, optname, optval, optlen);
 }
+
+#ifdef HAVE_SIGNALFD
+static int libc_signalfd(int fd, const sigset_t *mask, int flags)
+{
+	swrap_load_lib_function(SWRAP_LIBSOCKET, signalfd);
+
+	return swrap.fns.libc_signalfd(fd, mask, flags);
+}
+#endif
 
 static int libc_socket(int domain, int type, int protocol)
 {
@@ -1964,6 +1979,29 @@ static void swrap_dump_packet(struct socket_info *si,
 
 	free(packet);
 }
+
+/****************************************************************************
+ *   SIGNALFD
+ ***************************************************************************/
+
+#ifdef HAVE_SIGNALFD
+static int swrap_signalfd(int fd, const sigset_t *mask, int flags)
+{
+	int rc;
+
+	rc = libc_signalfd(fd, mask, flags);
+	if (rc != -1) {
+		swrap_remove_stale(fd);
+	}
+
+	return rc;
+}
+
+int signalfd(int fd, const sigset_t *mask, int flags)
+{
+	return swrap_signalfd(fd, mask, flags);
+}
+#endif
 
 /****************************************************************************
  *   SOCKET
