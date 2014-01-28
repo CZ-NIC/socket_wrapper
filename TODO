@@ -10,6 +10,8 @@ Library:
   We accept a connection from a client and need to pass the fd to another
   child we forked. socket_wrapper then needs to send the 'struct socket_info'
   to the child first and set it up there.
+  Or do it like swrap_accept() and call getpeername() and getsockname().
+* Add support for threading.
 
 Testing:
 ---------
@@ -17,3 +19,4 @@ Testing:
 * Add a test for sento() to broadcast 255.255.255.255.
 * Add a test to check that read/readv/send/ only work on connected sockets.
 * Add unit tests for conversion functions like convert_in_un_remote().
+* Add threaded tests.
