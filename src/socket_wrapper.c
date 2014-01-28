@@ -3934,6 +3934,9 @@ static int swrap_dup(int fd)
 		return -1;
 	}
 
+	/* Make sure we don't have an entry for the fd */
+	swrap_remove_stale(fi->fd);
+
 	SWRAP_DLIST_ADD(si->fds, fi);
 	return fi->fd;
 }
@@ -3977,6 +3980,9 @@ static int swrap_dup2(int fd, int newfd)
 		errno = saved_errno;
 		return -1;
 	}
+
+	/* Make sure we don't have an entry for the fd */
+	swrap_remove_stale(fi->fd);
 
 	SWRAP_DLIST_ADD(si->fds, fi);
 	return fi->fd;
