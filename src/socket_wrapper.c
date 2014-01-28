@@ -2814,7 +2814,8 @@ static ssize_t swrap_sendmsg_before(int fd,
 	return 0;
 }
 
-static void swrap_sendmsg_after(struct socket_info *si,
+static void swrap_sendmsg_after(int fd,
+				struct socket_info *si,
 				struct msghdr *msg,
 				const struct sockaddr *to,
 				ssize_t ret)
@@ -2827,8 +2828,13 @@ static void swrap_sendmsg_after(struct socket_info *si,
 	size_t remain;
 
 	/* to give better errors */
-	if (ret == -1 && saved_errno == ENOENT) {
-		saved_errno = EHOSTUNREACH;
+	if (ret == -1) {
+		if (saved_errno == ENOENT) {
+			saved_errno = EHOSTUNREACH;
+		} else if (saved_errno == ENOTSOCK) {
+			/* If the fd is not a socket, remove it */
+			swrap_remove_stale(fd);
+		}
 	}
 
 	for (i = 0; i < (size_t)msg->msg_iovlen; i++) {
@@ -3229,7 +3235,7 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 			  (struct sockaddr *)msg.msg_name,
 			  msg.msg_namelen);
 
-	swrap_sendmsg_after(si, &msg, to, ret);
+	swrap_sendmsg_after(s, si, &msg, to, ret);
 
 	return ret;
 }
@@ -3396,7 +3402,7 @@ static ssize_t swrap_send(int s, const void *buf, size_t len, int flags)
 
 	ret = libc_send(s, buf, len, flags);
 
-	swrap_sendmsg_after(si, &msg, NULL, ret);
+	swrap_sendmsg_after(s, si, &msg, NULL, ret);
 
 	return ret;
 }
@@ -3556,7 +3562,7 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 
 	ret = libc_sendmsg(s, &msg, flags);
 
-	swrap_sendmsg_after(si, &msg, to, ret);
+	swrap_sendmsg_after(s, si, &msg, to, ret);
 
 	return ret;
 }
@@ -3663,7 +3669,7 @@ static ssize_t swrap_writev(int s, const struct iovec *vector, int count)
 
 	ret = libc_writev(s, msg.msg_iov, msg.msg_iovlen);
 
-	swrap_sendmsg_after(si, &msg, NULL, ret);
+	swrap_sendmsg_after(s, si, &msg, NULL, ret);
 
 	return ret;
 }
