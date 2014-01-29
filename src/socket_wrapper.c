@@ -593,11 +593,18 @@ static int libc_listen(int sockfd, int backlog)
 	return swrap.fns.libc_listen(sockfd, backlog);
 }
 
-static int libc_open(const char *pathname, int flags, mode_t mode)
+static int libc_vopen(const char *pathname, int flags, va_list ap)
 {
+	long int mode = 0;
+	int fd;
+
 	swrap_load_lib_function(SWRAP_LIBC, open);
 
-	return swrap.fns.libc_open(pathname, flags, mode);
+	mode = va_arg(ap, long int);
+
+	fd = swrap.fns.libc_open(pathname, flags, (mode_t)mode);
+
+	return fd;
 }
 
 static int libc_pipe(int pipefd[2])
@@ -2630,11 +2637,11 @@ int listen(int s, int backlog)
  *   OPEN
  ***************************************************************************/
 
-static int swrap_open(const char *pathname, int flags, mode_t mode)
+static int swrap_vopen(const char *pathname, int flags, va_list ap)
 {
 	int ret;
 
-	ret = libc_open(pathname, flags, mode);
+	ret = libc_vopen(pathname, flags, ap);
 	if (ret != -1) {
 		/*
 		 * There are methods for closing descriptors (libc-internal code
@@ -2649,13 +2656,14 @@ static int swrap_open(const char *pathname, int flags, mode_t mode)
 
 int open(const char *pathname, int flags, ...)
 {
-	mode_t mode;
 	va_list ap;
+	int fd;
 
 	va_start(ap, flags);
-	mode = va_arg(ap, mode_t);
+	fd = swrap_vopen(pathname, flags, ap);
 	va_end(ap);
-	return swrap_open(pathname, flags, mode);
+
+	return fd;
 }
 
 /****************************************************************************
