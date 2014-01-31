@@ -221,6 +221,7 @@ struct socket_info *sockets;
 
 /* Function prototypes */
 
+bool socket_wrapper_enabled(void);
 void swrap_destructor(void) DESTRUCTOR_ATTRIBUTE;
 
 #ifdef NDEBUG
@@ -804,6 +805,13 @@ static const char *socket_wrapper_dir(void)
 
 	SWRAP_LOG(SWRAP_LOG_TRACE, "socket_wrapper_dir: %s", s);
 	return s;
+}
+
+bool socket_wrapper_enabled(void)
+{
+	const char *s = socket_wrapper_dir();
+
+	return s != NULL ? true : false;
 }
 
 static unsigned int socket_wrapper_default_iface(void)
@@ -2063,7 +2071,7 @@ static int swrap_socket(int family, int type, int protocol)
 	real_type &= ~SOCK_NONBLOCK;
 #endif
 
-	if (socket_wrapper_dir() == NULL) {
+	if (!socket_wrapper_enabled()) {
 		return libc_socket(family, type, protocol);
 	}
 
