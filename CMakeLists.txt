@@ -71,9 +71,11 @@ install(
 
 # cmake config files
 configure_file(socket_wrapper-config-version.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/socket_wrapper-config-version.cmake @ONLY)
+configure_file(socket_wrapper-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/socket_wrapper-config.cmake @ONLY)
 install(
     FILES
         ${CMAKE_CURRENT_BINARY_DIR}/socket_wrapper-config-version.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/socket_wrapper-config.cmake
     DESTINATION
         ${CMAKE_INSTALL_DIR}
     COMPONENT
