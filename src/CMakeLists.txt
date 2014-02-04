@@ -21,3 +21,7 @@ set_target_properties(
       SOVERSION
         ${LIBRARY_SOVERSION}
 )
+
+# This needs to be at the end
+get_target_property(SWRAP_LOCATION socket_wrapper LOCATION)
+set(SOCKET_WRAPPER_LOCATION ${SWRAP_LOCATION} PARENT_SCOPE)
