@@ -39,12 +39,12 @@ foreach(_SWRAP_TEST ${SWRAP_TESTS})
             TEST
                 ${_SWRAP_TEST}
             PROPERTY
-                ENVIRONMENT DYLD_FORCE_FLAT_NAMESPACE=1;DYLD_INSERT_LIBRARIES=${CMAKE_BINARY_DIR}/src/libsocket_wrapper.dylib)
+                ENVIRONMENT DYLD_FORCE_FLAT_NAMESPACE=1;DYLD_INSERT_LIBRARIES=${SOCKET_WRAPPER_LOCATION})
     else ()
         set_property(
             TEST
                 ${_SWRAP_TEST}
             PROPERTY
-                ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/src/libsocket_wrapper.so)
+                ENVIRONMENT LD_PRELOAD=${SOCKET_WRAPPER_LOCATION})
     endif()
 endforeach()
