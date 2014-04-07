@@ -23,5 +23,6 @@ set_target_properties(
 )
 
 # This needs to be at the end
+cmake_policy(SET CMP0026 OLD)
 get_target_property(SWRAP_LOCATION socket_wrapper LOCATION)
 set(SOCKET_WRAPPER_LOCATION ${SWRAP_LOCATION} PARENT_SCOPE)
