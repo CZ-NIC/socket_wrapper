@@ -85,6 +85,8 @@ static void test_swrap_ioctl_sock(void **state)
 
 	assert_int_not_equal(grp, -127);
 #endif
+
+	close(fd);
 }
 
 int main(void) {
