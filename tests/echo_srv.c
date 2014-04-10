@@ -89,6 +89,7 @@ static int become_daemon(struct echo_srv_opts *opts)
     int ret;
     pid_t child_pid;
     int fd;
+    int i;
 
     if (getppid() == 1) {
         return 0;
@@ -126,14 +127,22 @@ static int become_daemon(struct echo_srv_opts *opts)
         close(fd);
     }
 
-    fd = open("/dev/null", O_RDWR);
-    if (fd == -1) {
-        ret = errno;
-        perror("open");
-        return ret;
+    for (i = 0; i < 3; i++) {
+        fd = open("/dev/null", O_RDWR, 0);
+        if (fd < 0) {
+            fd = open("/dev/null", O_WRONLY, 0);
+        }
+        if (fd < 0) {
+            ret = errno;
+            perror("Can't open /dev/null");
+            return ret;
+        }
+        if (fd != i) {
+            perror("Didn't get correct fd");
+            close(fd);
+            return EINVAL;
+        }
     }
-    dup(fd);
-    dup(fd);
 
     umask(0177);
     return 0;
