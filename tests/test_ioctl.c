@@ -37,9 +37,10 @@ static void teardown(void **state)
 
 	(void) state; /* unused */
 
-	if (swrap_dir != NULL) {
-		snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", swrap_dir);
+	if (swrap_dir == NULL) {
+		return;
 	}
+	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", swrap_dir);
 
 	rc = system(remove_cmd);
 	if (rc < 0) {
