@@ -395,41 +395,42 @@ static void echo_tcp(int sock)
     char buf[BUFSIZE];
     ssize_t bret;
 
-    int client_sock;
+    int client_sock = -1;
     int s;
 
     s = accept(sock, (struct sockaddr *)&css, &addrlen);
     if (s == -1) {
         perror("accept");
-        return;
+	goto done;
     }
 
     client_sock = socket_dup(s);
     if (client_sock == -1) {
         perror("socket_dup");
-        return;
+	goto done;
     }
 
     /* Start ping pong */
     while (1) {
         bret = recv(client_sock, buf, BUFSIZE, 0);
         if (bret == -1) {
-            close(client_sock);
             perror("recv");
-            continue;
+            goto done;
         } else if (bret == 0) {
             break;
         }
 
         bret = send(client_sock, buf, bret, 0);
         if (bret == -1) {
-            close(client_sock);
             perror("send");
-            continue;
+            goto done;
         }
     }
 
-    close(client_sock);
+done:
+    if (client_sock != -1) {
+	    close(client_sock);
+    }
 }
 
 static void echo_udp(int sock)
