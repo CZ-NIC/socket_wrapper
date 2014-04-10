@@ -53,7 +53,9 @@ static int pidfile(const char *path)
 {
     int err;
     int fd;
-    char pid_str[32];
+    char pid_str[32] = { 0 };
+    ssize_t nwritten;
+    size_t len;
 
     fd = open(path, O_RDONLY, 0644);
     err = errno;
@@ -70,9 +72,14 @@ static int pidfile(const char *path)
         return err;
     }
 
-    memset(pid_str, 0, sizeof(pid_str));
     snprintf(pid_str, sizeof(pid_str) -1, "%u\n", (unsigned int) getpid());
-    write(fd, pid_str, strlen(pid_str));
+    len = strlen(pid_str);
+
+    nwritten = write(fd, pid_str, len);
+    close(fd);
+    if (nwritten != (ssize_t)len) {
+        return EIO;
+    }
 
     return 0;
 }
