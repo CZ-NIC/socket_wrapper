@@ -118,7 +118,6 @@ static void test_bind_ipv6_only(void **state)
 		case AF_INET:
 			assert_int_equal(rc, -1);
 
-			close(s);
 			break;
 		case AF_INET6:
 			assert_int_equal(rc, 0);
@@ -126,11 +125,12 @@ static void test_bind_ipv6_only(void **state)
 			rc = bind(s, ri->ai_addr, ri->ai_addrlen);
 			assert_int_equal(rc, 0);
 
-			close(s);
 			break;
 		default:
 			break;
 		}
+
+		close(s);
 	}
 	freeaddrinfo(res);
 }
