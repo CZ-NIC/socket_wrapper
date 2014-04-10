@@ -307,11 +307,11 @@ static int socket_dup(int s)
 
     /* Test dup2 */
     s = dup2(s2, s);
+    close(s2);
     if (s == -1) {
         perror("dup");
         return -1;
     }
-    close(s2);
 
     ZERO_STRUCT(srv_ss3);
     srv_ss3_len = sizeof(srv_ss3);
