@@ -182,6 +182,7 @@ static int setup_srv(struct echo_srv_opts *opts, int *_sock)
         ret = listen(sock, BACKLOG);
         if (ret == -1) {
             ret = errno;
+            close(sock);
             perror("listen");
             return ret;
         }
