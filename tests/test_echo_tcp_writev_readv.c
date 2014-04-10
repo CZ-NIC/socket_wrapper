@@ -68,7 +68,8 @@ static void test_writev_readv_ipv4(void **state)
 
 		for (j = 0; j < i; j++) {
 			memset(send_buf[j], 0, 64);
-			snprintf(send_buf[j], sizeof(send_buf), "packet.%d", j);
+			snprintf(send_buf[j], sizeof(send_buf[j]),
+				 "packet.%d", j);
 
 			iov_send[j].iov_base = send_buf[j];
 			iov_send[j].iov_len = strlen(send_buf[j]);
@@ -132,7 +133,8 @@ static void test_writev_readv_ipv6(void **state)
 
 		for (j = 0; j < i; j++) {
 			memset(send_buf[j], 0, 64);
-			snprintf(send_buf[j], sizeof(send_buf), "packet.%d", j);
+			snprintf(send_buf[j], sizeof(send_buf[j]),
+				 "packet.%d", j);
 
 			iov_send[j].iov_base = send_buf[j];
 			iov_send[j].iov_len = strlen(send_buf[j]);
