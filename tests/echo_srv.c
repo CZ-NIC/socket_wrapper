@@ -262,6 +262,7 @@ static int socket_dup(int s)
     rc = getsockname(s2, (struct sockaddr *)&srv_ss2, &srv_ss2_len);
     if (rc == -1) {
         perror("getsockname");
+        close(s2);
         return -1;
     }
 
@@ -270,12 +271,14 @@ static int socket_dup(int s)
     rc = getpeername(s2, (struct sockaddr *)&cli_ss2, &cli_ss2_len);
     if (rc == -1) {
         perror("getpeername");
+        close(s2);
         return -1;
     }
 
     if (cli_ss1_len != cli_ss2_len ||
         srv_ss1_len != srv_ss2_len) {
         perror("length mismatch");
+        close(s2);
         return -1;
     }
 
@@ -318,6 +321,7 @@ static int socket_dup(int s)
     }
     default:
         perror("family mismatch");
+        close(s2);
         return -1;
     }
 
@@ -334,6 +338,7 @@ static int socket_dup(int s)
     rc = getsockname(s, (struct sockaddr *)&srv_ss3, &srv_ss3_len);
     if (rc == -1) {
         perror("getsockname");
+        close(s);
         return -1;
     }
 
@@ -342,12 +347,14 @@ static int socket_dup(int s)
     rc = getpeername(s, (struct sockaddr *)&cli_ss3, &cli_ss3_len);
     if (rc == -1) {
         perror("getpeername");
+        close(s);
         return -1;
     }
 
     if (cli_ss2_len != cli_ss3_len ||
         srv_ss2_len != srv_ss3_len) {
         perror("length mismatch");
+        close(s);
         return -1;
     }
 
@@ -390,6 +397,7 @@ static int socket_dup(int s)
     }
     default:
         perror("family mismatch");
+        close(s);
         return -1;
     }
 
