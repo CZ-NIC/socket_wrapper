@@ -23,6 +23,7 @@ set(SWRAP_TESTS
     test_echo_tcp_socket_options
     test_echo_tcp_write_read
     test_echo_tcp_writev_readv
+    test_echo_tcp_get_peer_sock_name
     test_echo_udp_sendto_recvfrom
     test_echo_udp_send_recv
     test_echo_udp_sendmsg_recvmsg)
