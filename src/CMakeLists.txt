@@ -23,7 +23,7 @@ set_target_properties(
 )
 
 # This needs to be at the end
-if (CMAKE_VERSION VERSION_GREATER 2.8.13)
+if (POLICY CMP0026)
     cmake_policy(SET CMP0026 OLD)
 endif()
 get_target_property(SWRAP_LOCATION socket_wrapper LOCATION)
