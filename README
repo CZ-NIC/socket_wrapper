@@ -18,7 +18,7 @@ is analogous to use the IPv4 addresses "127.0.0.<ID>" or IPv6 addresses
 should always set the default interface. If you listen on INADDR_ANY then it
 will use the default interface to listen on.
 
-Exmaple: 
+Example:
 LD_PRELOAD=libsocket_wrapper.so \
 SOCKET_WRAPPER_DIR=/path/to/socket_dir \
 ./mydaemon
