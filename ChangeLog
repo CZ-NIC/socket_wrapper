@@ -1,6 +1,11 @@
 ChangeLog
 ==========
 
+version 1.0.2 (released 2014-05-05)
+  * Fixed memory leaks
+  * Fixed calling open from libc.
+  * Fixed loading libc functions on some platforms.
+
 version 1.0.1 (released 2014-02-04)
   * Added --libs to pkg-config.
   * Added socket_wrapper-config.cmake
