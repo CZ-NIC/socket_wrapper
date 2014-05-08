@@ -51,6 +51,7 @@ check_include_file(sys/filio.h HAVE_SYS_FILIO_H)
 check_include_file(sys/signalfd.h HAVE_SYS_SIGNALFD_H)
 check_include_file(sys/eventfd.h HAVE_SYS_EVENTFD_H)
 check_include_file(sys/timerfd.h HAVE_SYS_TIMERFD_H)
+check_include_file(gnu/lib-names.h HAVE_GNU_LIB_NAMES_H)
 
 # FUNCTIONS
 check_function_exists(strncpy HAVE_STRNCPY)

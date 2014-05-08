@@ -18,6 +18,7 @@
 #cmakedefine HAVE_SYS_SIGNALFD_H 1
 #cmakedefine HAVE_SYS_EVENTFD_H 1
 #cmakedefine HAVE_SYS_TIMERFD_H 1
+#cmakedefine HAVE_GNU_LIB_NAMES_H 1
 
 /************************ STRUCT MEMBERS *************************/
 
