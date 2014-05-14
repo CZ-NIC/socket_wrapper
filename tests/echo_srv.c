@@ -32,7 +32,7 @@
 #define BACKLOG     5
 
 #ifndef BUFSIZE
-#define BUFSIZE     4194304
+#define BUFSIZE     0x400000
 #endif /* BUFSIZE */
 
 #ifndef discard_const
@@ -635,6 +635,89 @@ static ssize_t echo_udp_recv_from_to(int sock,
 	return ret;
 }
 
+static ssize_t echo_udp_send_to_from(int sock,
+				     void *buf, size_t buflen, int flags,
+				     struct sockaddr *to, socklen_t tolen,
+				     struct sockaddr *from, socklen_t fromlen)
+{
+	struct msghdr msg;
+	struct iovec iov;
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	size_t clen = CMSG_SPACE(sizeof(union pktinfo));
+	char cbuf[clen];
+	struct cmsghdr *cmsgptr;
+#endif
+	ssize_t ret;
+
+	iov.iov_base = buf;
+	iov.iov_len = buflen;
+
+	ZERO_STRUCT(msg);
+
+	msg.msg_name = to;
+	msg.msg_namelen = tolen;
+
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	memset(cbuf, 0, clen);
+
+	msg.msg_control = cbuf;
+	msg.msg_controllen = clen;
+
+	cmsgptr = CMSG_FIRSTHDR(&msg);
+	msg.msg_controllen = 0;
+
+	switch (from->sa_family) {
+	case AF_INET: {
+		struct in_pktinfo *p = (struct in_pktinfo *)CMSG_DATA(cmsgptr);
+		const struct sockaddr_in *from4 = (const struct sockaddr_in *)from;
+
+		if (fromlen != sizeof(struct sockaddr_in)) {
+			break;
+		}
+
+		cmsgptr->cmsg_level = IPPROTO_IP;
+		cmsgptr->cmsg_type = IP_PKTINFO;
+		cmsgptr->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+
+		p->ipi_spec_dst = from4->sin_addr;
+
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+
+		break;
+	}
+#ifdef IPV6_PKTINFO
+	case AF_INET6: {
+		struct in6_pktinfo *p = (struct in6_pktinfo *)CMSG_DATA(cmsgptr);
+		const struct sockaddr_in6 *from6 = (const struct sockaddr_in6 *)from;
+
+		if (fromlen != sizeof(struct sockaddr_in6)) {
+			break;
+		}
+
+		cmsgptr->cmsg_level = IPPROTO_IPV6;
+		cmsgptr->cmsg_type = IPV6_PKTINFO;
+		cmsgptr->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+
+		p->ipi6_addr = from6->sin6_addr;
+
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+
+		break;
+	}
+#endif
+	default:
+		break;
+	}
+#endif
+
+	ret = sendmsg(sock, &msg, flags);
+
+	return ret;
+}
+
 static void echo_udp(int sock)
 {
     struct sockaddr_storage saddr;
@@ -654,8 +737,10 @@ static void echo_udp(int sock)
             continue;
         }
 
-        bret = sendto(sock, buf, bret, 0,
-                      (struct sockaddr *) &saddr, saddrlen);
+        bret = echo_udp_send_to_from(sock,
+                                     buf, bret, 0,
+                                     (struct sockaddr *)&saddr, saddrlen,
+                                     (struct sockaddr *)&daddr, daddrlen);
         if (bret == -1) {
             perror("sendto");
             continue;
