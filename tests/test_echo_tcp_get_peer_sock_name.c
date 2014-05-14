@@ -331,6 +331,61 @@ static void test_connect_getsockname_getpeername_any_port(void **state)
 	close(s);
 }
 
+static void test_connect_getsockname_getpeername_len(void **state)
+{
+	struct sockaddr_in sin;
+	socklen_t slen = sizeof(struct sockaddr_in);
+	struct sockaddr_storage cli_ss1;
+	socklen_t cli_ss1_len;
+	struct sockaddr_storage srv_ss1;
+	socklen_t srv_ss1_len;
+	socklen_t tmp_len;
+	int rc;
+	int s;
+
+	(void) state; /* unused */
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	assert_return_code(s, errno);
+
+	/* connect */
+	ZERO_STRUCT(sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(torture_server_port());
+	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	assert_int_equal(rc, 1);
+
+	/* Connect */
+	rc = connect(s, (struct sockaddr *)&sin, slen);
+	assert_return_code(rc, errno);
+
+	/* Check with len=0 */
+	ZERO_STRUCT(cli_ss1);
+	cli_ss1_len = 0;
+	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	assert_return_code(rc, errno);
+
+	ZERO_STRUCT(srv_ss1);
+	srv_ss1_len = 0;
+	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	assert_return_code(rc, errno);
+
+	/* Check with len=too small */
+	ZERO_STRUCT(cli_ss1);
+	tmp_len = cli_ss1_len = sizeof(struct sockaddr_in) - 2;
+	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(tmp_len + 2, cli_ss1_len);
+
+	ZERO_STRUCT(srv_ss1);
+	tmp_len = srv_ss1_len = sizeof(struct sockaddr_in) - 2;
+	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(tmp_len + 2, srv_ss1_len);
+
+	close(s);
+}
+
 int main(void) {
 	int rc;
 
@@ -345,6 +400,9 @@ int main(void) {
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
 		unit_test_setup_teardown(test_connect_getsockname_getpeername_any_port,
+					 setup_echo_srv_tcp_ipv4,
+					 teardown),
+		unit_test_setup_teardown(test_connect_getsockname_getpeername_len,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
 	};
