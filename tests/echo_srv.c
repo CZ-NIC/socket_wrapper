@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <errno.h>
 
 #include <sys/types.h>
@@ -21,6 +23,10 @@
 #ifndef PIDFILE
 #define PIDFILE     "echo_srv.pid"
 #endif  /* PIDFILE */
+
+#define ECHO_SRV_IPV4 "127.0.0.10"
+/* socket wrapper IPv6 prefix  fd00::5357:5fxx */
+#define ECHO_SRV_IPV6 "fd00::5357:5f0a"
 
 #define DFL_PORT    7
 #define BACKLOG     5
@@ -48,6 +54,58 @@ struct echo_srv_opts {
     char *bind;
     const char *pidfile;
 };
+
+union pktinfo {
+#ifdef HAVE_STRUCT_IN6_PKTINFO
+	struct in6_pktinfo pkt6;
+#endif
+	struct in_pktinfo pkt4;
+	char c;
+};
+
+static const char *echo_server_address(int family)
+{
+	switch (family) {
+	case AF_INET: {
+		const char *ip4 = getenv("TORTURE_SERVER_ADDRESS_IPV4");
+
+		if (ip4 != NULL && ip4[0] != '\0') {
+			return ip4;
+		}
+
+		return ECHO_SRV_IPV4;
+	}
+	case AF_INET6: {
+		const char *ip6 = getenv("TORTURE_SERVER_ADDRESS_IPV6");
+
+		if (ip6 != NULL && ip6[0] != '\0') {
+			return ip6;
+		}
+
+		return ECHO_SRV_IPV6;
+	}
+	default:
+		return NULL;
+	}
+
+	return NULL;
+}
+
+static void _assert_return_code(int rc,
+				int err,
+				const char * const file,
+				const int line)
+{
+	if (rc < 0) {
+		fprintf(stderr, "Fatal error: %s\n", strerror(err));
+		fprintf(stderr, "%s:%d", file, line);
+
+		abort();
+	}
+}
+#define assert_return_code(rc, err) \
+	_assert_return_code(rc, err, __FILE__, __LINE__)
+
 
 static int pidfile(const char *path)
 {
@@ -148,6 +206,28 @@ static int become_daemon(struct echo_srv_opts *opts)
     return 0;
 }
 
+static void set_sock_pktinfo(int sock, int family)
+{
+	int sockopt = 1;
+	int option = 0;
+	int proto = 0;
+	int rc;
+
+	switch(family) {
+	case AF_INET:
+		proto = IPPROTO_IP;
+		option = IP_PKTINFO;
+		break;
+	case AF_INET6:
+		proto = IPPROTO_IPV6;
+		option = IPV6_RECVPKTINFO;
+		break;
+	}
+
+	rc = setsockopt(sock, proto, option, &sockopt, sizeof(sockopt));
+	assert_return_code(rc, errno);
+}
+
 /* Returns 0 on success, errno on failure. If successful,
  * sock is a ready to use socket */
 static int setup_srv(struct echo_srv_opts *opts, int *_sock)
@@ -178,6 +258,10 @@ static int setup_srv(struct echo_srv_opts *opts, int *_sock)
             freeaddrinfo(res);
             perror("socket");
             return ret;
+        }
+
+        if (ri->ai_socktype == SOCK_DGRAM) {
+            set_sock_pktinfo(sock, ri->ai_family);
         }
 
         ret = bind(sock, ri->ai_addr, ri->ai_addrlen);
@@ -450,23 +534,128 @@ done:
     }
 }
 
+static ssize_t echo_udp_recv_from_to(int sock,
+				     void *buf, size_t buflen, int flags,
+				     struct sockaddr *from, socklen_t *fromlen,
+				     struct sockaddr *to, socklen_t *tolen)
+{
+	struct msghdr rmsg;
+	struct iovec riov;
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	size_t cmlen = CMSG_LEN(sizeof(union pktinfo));
+	char cmsg[cmlen];
+#endif
+	ssize_t ret;
+
+	riov.iov_base = buf;
+	riov.iov_len = buflen;
+
+	ZERO_STRUCT(rmsg);
+
+	rmsg.msg_name = from;
+	rmsg.msg_namelen = *fromlen;
+
+	rmsg.msg_iov = &riov;
+	rmsg.msg_iovlen = 1;
+
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	memset(cmsg, 0, cmlen);
+
+	rmsg.msg_control = cmsg;
+	rmsg.msg_controllen = cmlen;
+#endif
+
+	ret = recvmsg(sock, &rmsg, flags);
+	if (ret < 0) {
+		return ret;
+	}
+	*fromlen = rmsg.msg_namelen;
+
+	if (rmsg.msg_controllen > 0) {
+		struct cmsghdr *cmsgptr;
+
+		cmsgptr = CMSG_FIRSTHDR(&rmsg);
+		while (cmsgptr != NULL) {
+			const char *p;
+
+			if (cmsgptr->cmsg_level == IPPROTO_IP &&
+					cmsgptr->cmsg_type == IP_PKTINFO) {
+				char ip[INET_ADDRSTRLEN] = { 0 };
+				struct in_pktinfo *pkt;
+				struct sockaddr_in *sinp = (struct sockaddr_in *)to;
+
+				pkt = (struct in_pktinfo *)CMSG_DATA(cmsgptr);
+
+				sinp->sin_family = AF_INET;
+				sinp->sin_addr = pkt->ipi_addr;
+				*tolen = sizeof(struct sockaddr_in);
+
+				p = inet_ntop(AF_INET, &sinp->sin_addr, ip, sizeof(ip));
+				if (p == 0) {
+					fprintf(stderr, "Failed to convert IP address");
+					abort();
+				}
+
+				if (strcmp(ip, echo_server_address(AF_INET)) != 0) {
+					fprintf(stderr, "Wrong IP received");
+					abort();
+				}
+			}
+#ifdef IPV6_PKTINFO
+			if (cmsgptr->cmsg_level == IPPROTO_IPV6 &&
+					cmsgptr->cmsg_type == IPV6_PKTINFO) {
+				char ip[INET6_ADDRSTRLEN] = { 0 };
+				struct in6_pktinfo *pkt6;
+				struct sockaddr_in6 *sin6p = (struct sockaddr_in6 *)to;
+
+				pkt6 = (struct in6_pktinfo *)CMSG_DATA(cmsgptr);
+
+				sin6p->sin6_family = AF_INET6;
+				sin6p->sin6_addr = pkt6->ipi6_addr;
+
+				p = inet_ntop(AF_INET6, &sin6p->sin6_addr, ip, sizeof(ip));
+				if (p == 0) {
+					fprintf(stderr, "Failed to convert IP address");
+					abort();
+				}
+
+				if (strcmp(ip, echo_server_address(AF_INET6)) != 0) {
+					fprintf(stderr, "Wrong IP received");
+					abort();
+				}
+			}
+#endif
+			cmsgptr = CMSG_NXTHDR(&rmsg, cmsgptr);
+		}
+	} else {
+		fprintf(stderr, "Failed to receive pktinfo");
+		abort();
+	}
+
+	return ret;
+}
+
 static void echo_udp(int sock)
 {
-    struct sockaddr_storage css;
-    socklen_t addrlen = sizeof(css);
+    struct sockaddr_storage saddr;
+    struct sockaddr_storage daddr;
+    socklen_t saddrlen = sizeof(saddr);
+    socklen_t daddrlen = sizeof(daddr);
     ssize_t bret;
     char buf[BUFSIZE];
 
     while (1) {
-        bret = recvfrom(sock, buf, BUFSIZE, 0,
-                        (struct sockaddr *) &css, &addrlen);
+        bret = echo_udp_recv_from_to(sock,
+                                     buf, BUFSIZE, 0,
+                                     (struct sockaddr *)&saddr, &saddrlen,
+                                     (struct sockaddr *)&daddr, &daddrlen);
         if (bret == -1) {
             perror("recvfrom");
             continue;
         }
 
         bret = sendto(sock, buf, bret, 0,
-                      (struct sockaddr *) &css, addrlen);
+                      (struct sockaddr *) &saddr, saddrlen);
         if (bret == -1) {
             perror("sendto");
             continue;
