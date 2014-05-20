@@ -60,6 +60,10 @@ check_function_exists(snprintf HAVE_SNPRINTF)
 check_function_exists(signalfd HAVE_SIGNALFD)
 check_function_exists(eventfd HAVE_EVENTFD)
 check_function_exists(timerfd_create HAVE_TIMERFD_CREATE)
+set(CMAKE_REQUIRED_FLAGS -D_GNU_SOURCE)
+check_function_exists(bindresvport HAVE_BINDRESVPORT)
+set(CMAKE_REQUIRED_FLAGS)
+
 
 if (UNIX)
     if (NOT LINUX)

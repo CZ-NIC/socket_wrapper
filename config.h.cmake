@@ -37,6 +37,7 @@
 #cmakedefine HAVE_SIGNALFD 1
 #cmakedefine HAVE_EVENTFD 1
 #cmakedefine HAVE_TIMERFD_CREATE 1
+#cmakedefine HAVE_BINDRESVPORT 1
 
 #cmakedefine HAVE_ACCEPT_PSOCKLEN_T 1
 #cmakedefine HAVE_IOCTL_INT 1
