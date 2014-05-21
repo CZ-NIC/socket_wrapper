@@ -22,6 +22,7 @@ set(SWRAP_TESTS
     test_ioctl
     test_echo_tcp_socket
     test_echo_tcp_connect
+    test_echo_tcp_bind
     test_echo_tcp_socket_options
     test_echo_tcp_write_read
     test_echo_tcp_writev_readv
