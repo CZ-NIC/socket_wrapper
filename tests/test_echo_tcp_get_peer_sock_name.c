@@ -37,7 +37,8 @@ static void _assert_sockaddr_equal(struct sockaddr_storage *ss, const char *a,
 		      &sinp->sin_addr,
 		      ip,
 		      sizeof(ip));
-	assert_non_null(p);
+	_assert_true(cast_ptr_to_largest_integral_type(p),
+		     "inet_ntop: Failed to convert IP address", file, line);
 
 	_assert_string_equal(ip, a, file, line);
 }
