@@ -26,6 +26,11 @@ static void setup_echo_srv_tcp_ipv4(void **state)
 }
 
 #ifdef HAVE_IPV6
+static void setup_echo_srv_tcp_ipv6(void **state)
+{
+	torture_setup_echo_srv_tcp_ipv6(state);
+}
+
 static void setup_ipv6(void **state)
 {
 	torture_setup_socket_dir(state);
@@ -82,7 +87,143 @@ static void test_sockopt_sndbuf(void **state)
 	close(s);
 }
 
+#ifndef SO_PROTOCOL
+# ifdef SO_PROTOTYPE /* The Solaris name */
+#  define SO_PROTOCOL SO_PROTOTYPE
+# endif /* SO_PROTOTYPE */
+#endif /* SO_PROTOCOL */
+
+static void test_sockopt_so(void **state)
+{
+	struct sockaddr_in sin;
+	socklen_t slen = sizeof(struct sockaddr_in);
+	socklen_t so_len;
+#ifdef SO_DOMAIN
+	int so_domain = -1;
+#endif /* SO_DOMAIN */
+	int so_protocol = -1;
+	int so_type = -1;
+	int rc;
+	int s;
+
+	(void) state; /* unused */
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	assert_int_not_equal(s, -1);
+
+	ZERO_STRUCT(sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(torture_server_port());
+
+	rc = inet_pton(sin.sin_family,
+		       torture_server_address(AF_INET),
+		       &sin.sin_addr);
+	assert_int_equal(rc, 1);
+
+	rc = connect(s, (struct sockaddr *)&sin, slen);
+	assert_int_equal(rc, 0);
+
+#ifdef SO_DOMAIN
+	so_len = sizeof(so_domain);
+	rc = getsockopt(s,
+			SOL_SOCKET,
+			SO_DOMAIN,
+			&so_domain,
+			&so_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(so_domain, AF_INET);
+	assert_int_equal(so_len, sizeof(int));
+#endif /* SO_DOMAIN */
+
+	so_len = sizeof(so_protocol);
+	rc = getsockopt(s,
+			SOL_SOCKET,
+			SO_PROTOCOL,
+			&so_protocol,
+			&so_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(so_protocol, IPPROTO_TCP);
+	assert_int_equal(so_len, sizeof(int));
+
+	so_len = sizeof(so_type);
+	rc = getsockopt(s,
+			SOL_SOCKET,
+			SO_TYPE,
+			&so_type,
+			&so_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(so_type, SOCK_STREAM);
+	assert_int_equal(so_len, sizeof(int));
+
+	close(s);
+}
+
 #ifdef HAVE_IPV6
+static void test_sockopt_so6(void **state)
+{
+	struct sockaddr_in6 sin6;
+	socklen_t slen = sizeof(struct sockaddr_in6);
+	socklen_t so_len;
+#ifdef SO_DOMAIN
+	int so_domain = -1;
+#endif /* SO_DOMAIN */
+	int so_protocol = -1;
+	int so_type = -1;
+	int rc;
+	int s;
+
+	(void) state; /* unused */
+
+	s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+	assert_int_not_equal(s, -1);
+
+	ZERO_STRUCT(sin6);
+	sin6.sin6_family = AF_INET6;
+	sin6.sin6_port = htons(torture_server_port());
+
+	rc = inet_pton(sin6.sin6_family,
+		       torture_server_address(AF_INET6),
+		       &sin6.sin6_addr);
+	assert_int_equal(rc, 1);
+
+	rc = connect(s, (struct sockaddr *)&sin6, slen);
+	assert_int_equal(rc, 0);
+
+#ifdef SO_DOMAIN
+	so_len = sizeof(so_domain);
+	rc = getsockopt(s,
+			SOL_SOCKET,
+			SO_DOMAIN,
+			&so_domain,
+			&so_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(so_domain, AF_INET6);
+	assert_int_equal(so_len, sizeof(int));
+#endif /* SO_DOMAIN */
+
+	so_len = sizeof(so_protocol);
+	rc = getsockopt(s,
+			SOL_SOCKET,
+			SO_PROTOCOL,
+			&so_protocol,
+			&so_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(so_protocol, IPPROTO_TCP);
+	assert_int_equal(so_len, sizeof(int));
+
+	so_len = sizeof(so_type);
+	rc = getsockopt(s,
+			SOL_SOCKET,
+			SO_TYPE,
+			&so_type,
+			&so_len);
+	assert_return_code(rc, errno);
+	assert_int_equal(so_type, SOCK_STREAM);
+	assert_int_equal(so_len, sizeof(int));
+
+	close(s);
+}
+
 static void test_bind_ipv6_only(void **state)
 {
 	struct addrinfo hints;
@@ -141,7 +282,13 @@ int main(void) {
 
 	const UnitTest tests[] = {
 		unit_test_setup_teardown(test_sockopt_sndbuf, setup_echo_srv_tcp_ipv4, teardown),
+		unit_test_setup_teardown(test_sockopt_so,
+					 setup_echo_srv_tcp_ipv4,
+					 teardown),
 #ifdef HAVE_IPV6
+		unit_test_setup_teardown(test_sockopt_so6,
+					 setup_echo_srv_tcp_ipv6,
+					 teardown),
 		unit_test_setup_teardown(test_bind_ipv6_only, setup_ipv6, teardown),
 #endif
 	};
