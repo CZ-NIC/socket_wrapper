@@ -55,6 +55,7 @@ struct echo_srv_opts {
     const char *pidfile;
 };
 
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 union pktinfo {
 #ifdef HAVE_STRUCT_IN6_PKTINFO
 	struct in6_pktinfo pkt6;
@@ -92,6 +93,7 @@ static const char *echo_server_address(int family)
 
 	return NULL;
 }
+#endif /* HAVE_STRUCT_MSGHDR_MSG_CONTROL */
 
 static void _assert_return_code(int rc,
 				int err,
@@ -217,13 +219,19 @@ static void set_sock_pktinfo(int sock, int family)
 
 	switch(family) {
 	case AF_INET:
+#ifdef IP_PKTINFO
 		proto = IPPROTO_IP;
 		option = IP_PKTINFO;
+#endif /* IP_PKTINFO */
 		break;
+#ifdef HAVE_IPV6
 	case AF_INET6:
+#ifdef IPV6_RECVPKTINFO
 		proto = IPPROTO_IPV6;
 		option = IPV6_RECVPKTINFO;
+#endif
 		break;
+#endif /* HAVE_IPV6 */
 	}
 
 	rc = setsockopt(sock, proto, option, &sockopt, sizeof(sockopt));
@@ -543,11 +551,15 @@ static ssize_t echo_udp_recv_from_to(int sock,
 {
 	struct msghdr rmsg;
 	struct iovec riov;
+	ssize_t ret;
+
 #ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	size_t cmlen = CMSG_LEN(sizeof(union pktinfo));
 	char cmsg[cmlen];
-#endif
-	ssize_t ret;
+#else
+	(void)to; /* unused */
+	(void)tolen; /* unused */
+#endif /* HAVE_STRUCT_MSGHDR_MSG_CONTROL */
 
 	riov.iov_base = buf;
 	riov.iov_len = buflen;
@@ -573,6 +585,7 @@ static ssize_t echo_udp_recv_from_to(int sock,
 	}
 	*fromlen = rmsg.msg_namelen;
 
+#ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	if (rmsg.msg_controllen > 0) {
 		struct cmsghdr *cmsgptr;
 
@@ -580,6 +593,7 @@ static ssize_t echo_udp_recv_from_to(int sock,
 		while (cmsgptr != NULL) {
 			const char *p;
 
+#ifdef IP_PKTINFO
 			if (cmsgptr->cmsg_level == IPPROTO_IP &&
 					cmsgptr->cmsg_type == IP_PKTINFO) {
 				char ip[INET_ADDRSTRLEN] = { 0 };
@@ -603,6 +617,7 @@ static ssize_t echo_udp_recv_from_to(int sock,
 					abort();
 				}
 			}
+#endif /* IP_PKTINFO */
 #ifdef IPV6_PKTINFO
 			if (cmsgptr->cmsg_level == IPPROTO_IPV6 &&
 					cmsgptr->cmsg_type == IPV6_PKTINFO) {
@@ -626,13 +641,14 @@ static ssize_t echo_udp_recv_from_to(int sock,
 					abort();
 				}
 			}
-#endif
+#endif /* IPV6_PKTINFO */
 			cmsgptr = CMSG_NXTHDR(&rmsg, cmsgptr);
 		}
 	} else {
 		fprintf(stderr, "Failed to receive pktinfo");
 		abort();
 	}
+#endif /* HAVE_STRUCT_MSGHDR_MSG_CONTROL */
 
 	return ret;
 }
@@ -644,12 +660,20 @@ static ssize_t echo_udp_send_to_from(int sock,
 {
 	struct msghdr msg;
 	struct iovec iov;
+	ssize_t ret;
+
 #ifdef HAVE_STRUCT_MSGHDR_MSG_CONTROL
 	size_t clen = CMSG_SPACE(sizeof(union pktinfo));
 	char cbuf[clen];
 	struct cmsghdr *cmsgptr;
-#endif
-	ssize_t ret;
+#endif /* HAVE_STRUCT_MSGHDR_MSG_CONTROL */
+
+#if !defined(HAVE_STRUCT_MSGHDR_MSG_CONTROL)
+	(void)from; /* unused */
+#if !defined(IP_PKTINFO) && !defined(IPV6_PKTINFO)
+	(void)fromlen; /* unused */
+#endif /* !IP_PKTINFO && !IPV6_PKTINFO */
+#endif /* !HAVE_STRUCT_MSGHDR_MSG_CONTROL */
 
 	iov.iov_base = buf;
 	iov.iov_len = buflen;
@@ -672,6 +696,7 @@ static ssize_t echo_udp_send_to_from(int sock,
 	msg.msg_controllen = 0;
 
 	switch (from->sa_family) {
+#ifdef IP_PKTINFO
 	case AF_INET: {
 		struct in_pktinfo *p = (struct in_pktinfo *)CMSG_DATA(cmsgptr);
 		const struct sockaddr_in *from4 = (const struct sockaddr_in *)from;
@@ -690,6 +715,7 @@ static ssize_t echo_udp_send_to_from(int sock,
 
 		break;
 	}
+#endif /* IP_PKTINFO */
 #ifdef IPV6_PKTINFO
 	case AF_INET6: {
 		struct in6_pktinfo *p = (struct in6_pktinfo *)CMSG_DATA(cmsgptr);
@@ -709,11 +735,11 @@ static ssize_t echo_udp_send_to_from(int sock,
 
 		break;
 	}
-#endif
+#endif /* IPV6_PKTINFO */
 	default:
 		break;
 	}
-#endif
+#endif /* HAVE_STRUCT_MSGHDR_MSG_CONTROL */
 
 	ret = sendmsg(sock, &msg, flags);
 
