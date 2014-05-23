@@ -59,7 +59,9 @@ union pktinfo {
 #ifdef HAVE_STRUCT_IN6_PKTINFO
 	struct in6_pktinfo pkt6;
 #endif
+#ifdef HAVE_STRUCT_IN_PKTINFO
 	struct in_pktinfo pkt4;
+#endif
 	char c;
 };
 

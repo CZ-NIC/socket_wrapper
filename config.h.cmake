@@ -22,6 +22,7 @@
 
 /**************************** STRUCTS ****************************/
 
+#cmakedefine HAVE_STRUCT_IN_PKTINFO 1
 #cmakedefine HAVE_STRUCT_IN6_PKTINFO 1
 
 /************************ STRUCT MEMBERS *************************/
