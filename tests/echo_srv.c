@@ -730,9 +730,13 @@ static ssize_t echo_udp_send_to_from(int sock,
 	msg.msg_controllen = 0;
 
 	switch (from->sa_family) {
-#ifdef IP_PKTINFO
+#if defined(IP_PKTINFO) || defined(IP_SENDSRCADDR)
 	case AF_INET: {
+#ifdef IP_PKTINFO
 		struct in_pktinfo *p = (struct in_pktinfo *)CMSG_DATA(cmsgptr);
+#elif defined(IP_SENDSRCADDR)
+		struct in_addr *p = (struct in_addr *)CMSG_DATA(cmsgptr);
+#endif
 		const struct sockaddr_in *from4 = (const struct sockaddr_in *)from;
 
 		if (fromlen != sizeof(struct sockaddr_in)) {
@@ -740,16 +744,20 @@ static ssize_t echo_udp_send_to_from(int sock,
 		}
 
 		cmsgptr->cmsg_level = IPPROTO_IP;
+#ifdef IP_PKTINFO
 		cmsgptr->cmsg_type = IP_PKTINFO;
-		cmsgptr->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-
 		p->ipi_spec_dst = from4->sin_addr;
+#elif defined(IP_SENDSRCADDR)
+		cmsgptr->cmsg_type = IP_SENDSRCADDR;
+		*p = from4->sin_addr;
+#endif
+		cmsgptr->cmsg_len = CMSG_LEN(sizeof(*p));
 
-		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+		msg.msg_controllen = CMSG_SPACE(sizeof(*p));
 
 		break;
 	}
-#endif /* IP_PKTINFO */
+#endif /* IP_PKTINFO || IP_SENDSRCADDR */
 #ifdef IPV6_PKTINFO
 	case AF_INET6: {
 		struct in6_pktinfo *p = (struct in6_pktinfo *)CMSG_DATA(cmsgptr);
