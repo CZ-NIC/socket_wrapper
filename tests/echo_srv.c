@@ -666,13 +666,9 @@ static ssize_t echo_udp_send_to_from(int sock,
 	size_t clen = CMSG_SPACE(sizeof(union pktinfo));
 	char cbuf[clen];
 	struct cmsghdr *cmsgptr;
-#endif /* HAVE_STRUCT_MSGHDR_MSG_CONTROL */
-
-#if !defined(HAVE_STRUCT_MSGHDR_MSG_CONTROL)
+#else
 	(void)from; /* unused */
-#if !defined(IP_PKTINFO) && !defined(IPV6_PKTINFO)
 	(void)fromlen; /* unused */
-#endif /* !IP_PKTINFO && !IPV6_PKTINFO */
 #endif /* !HAVE_STRUCT_MSGHDR_MSG_CONTROL */
 
 	iov.iov_base = buf;
