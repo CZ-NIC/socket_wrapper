@@ -17,17 +17,18 @@ To create a local copy, run
 Building from sources
 =====================
 
-socket_wrapper uses cmake (www.cmake.org) as build system.
+socket_wrapper uses cmake (www.cmake.org) as its build system.
 
-In a unpacked sources base directory, create a directory to
-contain the build results:
+In an unpacked sources base directory, create a directory to
+contain the build results, e.g.
 
   $ mkdir obj
   $ cd obj
 
-Note this target directory can be named arbitrarily.
+Note that "obj" is just an example. The directory can
+be named arbitrarily.
 
-Next, run cmake to configure the build, e.g.:
+Next, run cmake to configure the build, e.g.
 
   $ cmake -DCMAKE_INSTALL_PREFIX=<prefix> ..
 
@@ -37,15 +38,18 @@ or on a 64 bit red hat system:
 
 The "<prefix>" should be replaced by the intended installation
 target prefix directory, typically /usr or /usr/local.
-If the build target directory is no a direct subdirectory
-of the source base directory, ".." needs to be replaced
-by the relative or absolute path of that directory.
+
+Note that the target directory does not have to be a direct
+or indirect subdirectory of the source base directory: It can
+be an arbitrary directory in the system. In the general case,
+".." has to be replaced by a relative or absolute path of the
+source base directory in the "cmake" command line.
 
 One can control the build type with "-DCMAKE_BUILD_TYPE=<mode>"
 where <mode> can be one of Debug, Release, RelWithDebInfo, and
-some more (see cmake.org). The default is RelWithDebInfo.
+some more (see cmake.org). The default is "RelWithDebInfo".
 
-Afterward configuring with cmake, run the build with
+After configuring with cmake, run the build with
 
   $ make
 
