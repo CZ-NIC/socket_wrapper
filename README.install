@@ -1,0 +1,74 @@
+Obtaining the sources
+=====================
+
+Source tarballs for socket_wrapper can be downloaded from
+
+  https://ftp.samba.org/pub/cwrap/
+
+The source code repository for socket wrapper is located under
+
+  git://git.samba.org/socket_wrapper.git
+
+To create a local copy, run
+
+  $ git clone git://git.samba.org/socket_wrapper.git
+  $ cd socket_wrapper
+
+Building from sources
+=====================
+
+socket_wrapper uses cmake (www.cmake.org) as build system.
+
+In a unpacked sources base directory, create a directory to
+contain the build results:
+
+  $ mkdir obj
+  $ cd obj
+
+Note this target directory can be named arbitrarily.
+
+Next, run cmake to configure the build, e.g.:
+
+  $ cmake -DCMAKE_INSTALL_PREFIX=<prefix> ..
+
+or on a 64 bit red hat system:
+
+  $  cmake -DCMAKE_INSTALL_PREFIX=<prefix> -DLIB_SUFFIX=64 ..
+
+The "<prefix>" should be replaced by the intended installation
+target prefix directory, typically /usr or /usr/local.
+If the build target directory is no a direct subdirectory
+of the source base directory, ".." needs to be replaced
+by the relative or absolute path of that directory.
+
+One can control the build type with "-DCMAKE_BUILD_TYPE=<mode>"
+where <mode> can be one of Debug, Release, RelWithDebInfo, and
+some more (see cmake.org). The default is RelWithDebInfo.
+
+Afterward configuring with cmake, run the build with
+
+  $ make
+
+Unit testing
+============
+
+In order to support running the test suite after building,
+the cmocka unit test framework needs to be installed (cmocka.org),
+and you need to specify
+
+  -DUNIT_TESTING=ON
+
+in the cmake run. After running "make",
+
+  $ make test
+
+runs the test suite.
+
+Installing
+==========
+
+socket_wrapper is installed into the prefix directory
+after running "cmake" and "make" with
+
+  $ make install
+
