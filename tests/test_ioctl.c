@@ -31,9 +31,8 @@ static void setup(void **state)
 
 static void teardown(void **state)
 {
-	char remove_cmd[256] = {0};
+	char remove_cmd[1024] = {0};
 	const char *swrap_dir = getenv("SOCKET_WRAPPER_DIR");
-	char *s;
 	int rc;
 
 	(void) state; /* unused */
@@ -42,10 +41,8 @@ static void teardown(void **state)
 		return;
 	}
 
-	/* Do not use a tainted string in snprintf */
-	s = strdup(swrap_dir);
-	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", s);
-	free(s);
+	strcpy(remove_cmd, "rm -rf ");
+	strncpy(remove_cmd + 8, swrap_dir, sizeof(remove_cmd) - 9);
 
 	rc = system(remove_cmd);
 	if (rc < 0) {
