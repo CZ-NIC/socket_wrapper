@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 #include <unistd.h>
 
 static void setup(void **state)
@@ -25,24 +26,23 @@ static void setup(void **state)
 	p = mkdtemp(test_tmpdir);
 	assert_non_null(p);
 
+	*state = strdup(p);
 	setenv("SOCKET_WRAPPER_DIR", p, 1);
 	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "11", 1);
 }
 
 static void teardown(void **state)
 {
-	char remove_cmd[1024] = {0};
-	const char *swrap_dir = getenv("SOCKET_WRAPPER_DIR");
+	char remove_cmd[PATH_MAX] = {0};
+	char *s = (char *)*state;
 	int rc;
 
-	(void) state; /* unused */
-
-	if (swrap_dir == NULL) {
+	if (s == NULL) {
 		return;
 	}
 
-	strcpy(remove_cmd, "rm -rf ");
-	strncpy(remove_cmd + 8, swrap_dir, sizeof(remove_cmd) - 9);
+	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", s);
+	free(s);
 
 	rc = system(remove_cmd);
 	if (rc < 0) {
