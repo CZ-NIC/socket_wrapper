@@ -853,6 +853,7 @@ static const char *socket_wrapper_dir(void)
 	if (s == NULL) {
 		return NULL;
 	}
+	/* TODO use realpath(3) here, when we add support for threads */
 	if (strncmp(s, "./", 2) == 0) {
 		s += 2;
 	}

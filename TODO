@@ -1,10 +1,14 @@
 TODO
 =====
 
+This is the TODO list of this project. It should give you some hints of things
+which need to be implemented. If you can spend some time on this project, then
+look at the list below.
+
+
 Library:
 ---------
 
-* Add IP_PKTINFO support for sendmsg/recvmsg.
 * Add support for fd passing in sendmsg/recvmsg.
   Scenario:
   We accept a connection from a client and need to pass the fd to another
@@ -12,6 +16,7 @@ Library:
   to the child first and set it up there.
   Or do it like swrap_accept() and call getpeername() and getsockname().
 * Add support for threading.
+* Use realpath() in socket_wrapper_dir().
 
 Testing:
 ---------
