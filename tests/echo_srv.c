@@ -153,7 +153,7 @@ static int pidfile(const char *path)
     return 0;
 }
 
-static int become_daemon(struct echo_srv_opts *opts)
+static int become_daemon(void)
 {
     int ret;
     pid_t child_pid;
@@ -177,13 +177,6 @@ static int become_daemon(struct echo_srv_opts *opts)
 #ifdef WORKING_DIR
     chdir(WORKING_DIR);
 #endif
-
-    ret = pidfile(opts->pidfile);
-    if (ret != 0) {
-        fprintf(stderr, "Cannot create pidfile %s: %s\n",
-                        opts->pidfile, strerror(ret));
-        return ret;
-    }
 
     ret = setsid();
     if (ret == -1) {
@@ -895,7 +888,7 @@ int main(int argc, char **argv)
     }
 
     if (opts.daemon) {
-        ret = become_daemon(&opts);
+        ret = become_daemon();
         if (ret != 0) {
             fprintf(stderr, "Cannot become daemon: %s\n", strerror(ret));
             goto done;
@@ -906,6 +899,15 @@ int main(int argc, char **argv)
     if (ret != 0) {
         fprintf(stderr, "Cannot setup server: %s\n", strerror(ret));
         goto done;
+    }
+
+    if (opts.daemon && opts.pidfile != NULL) {
+        ret = pidfile(opts.pidfile);
+        if (ret != 0) {
+            fprintf(stderr, "Cannot create pidfile %s: %s\n",
+                    opts.pidfile, strerror(ret));
+            goto done;
+        }
     }
 
     echo(sock, &opts);
