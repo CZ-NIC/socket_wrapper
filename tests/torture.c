@@ -147,6 +147,7 @@ static void torture_setup_echo_srv_ip(void **state,
 	struct torture_state *s;
 	char start_echo_srv[1024] = {0};
 	const char *t;
+	int count = 0;
 	int rc;
 
 	torture_setup_socket_dir(state);
@@ -175,7 +176,18 @@ static void torture_setup_echo_srv_ip(void **state,
 	rc = system(start_echo_srv);
 	assert_int_equal(rc, 0);
 
-	sleep(1);
+	do {
+		struct stat sb;
+
+		count++;
+		if (count > 100) {
+			break;
+		}
+
+		rc = stat(s->srv_pidfile, &sb);
+		usleep(50);
+	} while (rc != 0);
+	assert_int_equal(rc, 0);
 
 	/* set default iface for the client */
 	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "170", 1);
