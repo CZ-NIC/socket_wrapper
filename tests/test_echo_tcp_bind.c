@@ -219,6 +219,10 @@ static void test_bind_on_ipv6_sock(void **state)
 {
 	struct sockaddr_in sin;
 	socklen_t slen = sizeof(struct sockaddr_in);
+	struct sockaddr_in6 sin6;
+	socklen_t slen6 = sizeof(struct sockaddr_in6);
+	struct sockaddr_un sun;
+	socklen_t sulen = sizeof(struct sockaddr_un);
 	int rc;
 	int s;
 
@@ -227,6 +231,19 @@ static void test_bind_on_ipv6_sock(void **state)
 	s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	assert_return_code(s, errno);
 
+	ZERO_STRUCT(sun);
+	sun.sun_family = AF_UNIX;
+	rc = bind(s, (struct sockaddr *)&sun, sulen);
+	assert_int_equal(rc, -1);
+	/* FreeBSD uses EINVAL here... */
+	assert_true(errno == EAFNOSUPPORT || errno == EINVAL);
+
+	ZERO_STRUCT(sin);
+	sin.sin_family = AF_INET;
+	rc = bind(s, (struct sockaddr *)&sin, slen);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EINVAL);
+
 	ZERO_STRUCT(sin);
 	sin.sin_family = AF_INET;
 
@@ -234,6 +251,12 @@ static void test_bind_on_ipv6_sock(void **state)
 	assert_int_equal(rc, 1);
 
 	rc = bind(s, (struct sockaddr *)&sin, slen);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EINVAL);
+
+	ZERO_STRUCT(sin6);
+	sin6.sin6_family = AF_INET;
+	rc = bind(s, (struct sockaddr *)&sin6, slen6);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 
