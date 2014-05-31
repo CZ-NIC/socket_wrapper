@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#ifdef HAVE_RPC_RPC_H
+#include <rpc/rpc.h>
+#endif
 
 static void setup_echo_srv_tcp_ipv4(void **state)
 {

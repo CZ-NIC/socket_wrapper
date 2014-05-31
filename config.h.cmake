@@ -19,6 +19,7 @@
 #cmakedefine HAVE_SYS_EVENTFD_H 1
 #cmakedefine HAVE_SYS_TIMERFD_H 1
 #cmakedefine HAVE_GNU_LIB_NAMES_H 1
+#cmakedefine HAVE_RPC_RPC_H 1
 
 /**************************** STRUCTS ****************************/
 
