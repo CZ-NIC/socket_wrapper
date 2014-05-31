@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
@@ -35,8 +36,12 @@ static void teardown(void **state)
 
 static void test_bind_ipv4(void **state)
 {
+	struct sockaddr sa;
+	socklen_t salen = sizeof(struct sockaddr);
 	struct sockaddr_in sin;
 	socklen_t slen = sizeof(struct sockaddr_in);
+	struct sockaddr_un sun;
+	socklen_t sulen = sizeof(struct sockaddr_un);
 	int rc;
 	int s;
 
@@ -45,6 +50,89 @@ static void test_bind_ipv4(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_return_code(s, errno);
 
+	/*
+	 * Test various cases with family AF_UNSPEC
+	 */
+
+	/* UNSPEC, len == 1: EINVAL */
+
+	sin = (struct sockaddr_in) {
+		.sin_family = AF_UNSPEC,
+	};
+	rc = bind(s, (struct sockaddr *)&sin, 1);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EINVAL);
+
+	/* UNSPEC: EAFNOSUPPORT */
+
+	sin = (struct sockaddr_in) {
+		.sin_family = AF_UNSPEC,
+	};
+	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	assert_int_equal(rc, 1);
+
+	rc = bind(s, (struct sockaddr *)&sin, slen);
+	assert_int_equal(rc, -1);
+	/* FreeBSD uses EADDRNOTAVAIL here ... */
+	assert_true(errno == EAFNOSUPPORT || errno == EADDRNOTAVAIL);
+
+	/* special case: AF_UNSPEC with INADDR_ANY: success mapped to AF_INET */
+
+	sin = (struct sockaddr_in) {
+		.sin_family = AF_UNSPEC,
+	};
+	assert_int_equal(sin.sin_addr.s_addr, htonl(INADDR_ANY));
+
+	rc = bind(s, (struct sockaddr *)&sin, slen);
+	assert_return_code(rc, errno);
+
+	close(s);
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	assert_return_code(s, errno);
+
+	/*
+	 * Test various cases with family AF_UNIX
+	 * all fail with EAFNOSUPPORT
+	 */
+
+	sa = (struct sockaddr) {
+		.sa_family = AF_UNIX,
+	};
+	rc = bind(s, (struct sockaddr *)&sa, salen);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EAFNOSUPPORT);
+
+	sin = (struct sockaddr_in) {
+		.sin_family = AF_UNIX,
+	};
+	rc = bind(s, (struct sockaddr *)&sin, slen);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EAFNOSUPPORT);
+
+	sun = (struct sockaddr_un) {
+		.sun_family = AF_UNIX,
+	};
+	rc = bind(s, (struct sockaddr *)&sun, sulen);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EAFNOSUPPORT);
+
+#ifdef HAVE_IPV6
+	/*
+	 * Test with family AF_INET6 - fail
+	 */
+
+	sin = (struct sockaddr_in) {
+		.sin_family = AF_INET6,
+	};
+	rc = bind(s, (struct sockaddr *)&sin, slen);
+	assert_int_equal(rc, -1);
+	assert_int_equal(errno, EAFNOSUPPORT);
+#endif
+
+	/*
+	 * Finally, success binding a new IPv4 address.
+	 */
 	ZERO_STRUCT(sin);
 	sin.sin_family = AF_INET;
 
