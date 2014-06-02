@@ -1,6 +1,17 @@
 ChangeLog
 ==========
 
+version 1.0.3 (released 2014-06-02)
+  * Added support for IP_PKTINFO in recvmsg().
+  * Added support for IPV6_PKTINFO in recvmsg().
+  * Added support for IP_RECVDSTADDR in recvmsg() on BSD.
+  * Added support for more socket options in getsockopt().
+  * Added support for bindresvport().
+  * Fixed rebinding on connect().
+  * Fixed sockaddr buffer truncation in getsockname() and getpeername().
+  * Fixed special cases in bind().
+  * Fixed loading libc on some platforms.
+
 version 1.0.2 (released 2014-05-05)
   * Fixed memory leaks
   * Fixed calling open from libc.
