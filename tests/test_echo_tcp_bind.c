@@ -308,6 +308,7 @@ static void test_bind_ipv4_addr_in_use(void **state)
 	close(s);
 }
 
+#ifdef HAVE_BINDRESVPORT
 static void test_bindresvport_ipv4(void **state)
 {
 	struct sockaddr_in sin;
@@ -367,6 +368,7 @@ static void test_bindresvport_ipv4_null(void **state)
 
 	close(s);
 }
+#endif /* HAVE_BINDRESVPORT */
 
 #ifdef HAVE_IPV6
 static void test_bind_on_ipv6_sock(void **state)
@@ -417,6 +419,7 @@ static void test_bind_on_ipv6_sock(void **state)
 	close(s);
 }
 
+#ifdef HAVE_BINDRESVPORT
 static void test_bindresvport_on_ipv6_sock(void **state)
 {
 	struct sockaddr_in sin;
@@ -456,7 +459,7 @@ static void test_bindresvport_on_ipv6_sock_null(void **state)
 
 	close(s);
 }
-
+#endif /* HAVE_BINDRESVPORT */
 #endif /* HAVE_IPV6 */
 
 int main(void) {
@@ -469,22 +472,26 @@ int main(void) {
 		unit_test_setup_teardown(test_bind_ipv4_addr_in_use,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
+#ifdef HAVE_BINDRESVPORT
 		unit_test_setup_teardown(test_bindresvport_ipv4,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
 		unit_test_setup_teardown(test_bindresvport_ipv4_null,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
+#endif /* HAVE_BINDRESVPORT */
 #ifdef HAVE_IPV6
 		unit_test_setup_teardown(test_bind_on_ipv6_sock,
 					 setup_echo_srv_tcp_ipv6,
 					 teardown),
+#ifdef HAVE_BINDRESVPORT
 		unit_test_setup_teardown(test_bindresvport_on_ipv6_sock,
 					 setup_echo_srv_tcp_ipv6,
 					 teardown),
 		unit_test_setup_teardown(test_bindresvport_on_ipv6_sock_null,
 					 setup_echo_srv_tcp_ipv6,
 					 teardown),
+#endif /* HAVE_BINDRESVPORT */
 #endif /* HAVE_IPV6 */
 	};
 
