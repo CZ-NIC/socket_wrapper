@@ -14,10 +14,11 @@ if (UNIX AND NOT WIN32)
 
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wshadow -Wmissing-prototypes -Wdeclaration-after-statement")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wunused -Wfloat-equal -Wpointer-arith -Wwrite-strings -Wformat-security")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-format-attribute")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-format-attribute -Wcast-align -Wcast-qual")
 
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=pointer-arith -Werror=declaration-after-statement")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=implicit-function-declaration")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=implicit-function-declaration -Werror=write-strings")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=int-to-pointer-cast -Werror=pointer-to-int-cast")
 
         # with -fPIC
         check_c_compiler_flag("-fPIC" WITH_FPIC)
