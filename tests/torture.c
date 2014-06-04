@@ -70,6 +70,7 @@ const char *torture_server_address(int family)
 
 		return TORTURE_ECHO_SRV_IPV4;
 	}
+#ifdef HAVE_IPV6
 	case AF_INET6: {
 		const char *ip6 = getenv("TORTURE_SERVER_ADDRESS_IPV6");
 
@@ -79,6 +80,7 @@ const char *torture_server_address(int family)
 
 		return TORTURE_ECHO_SRV_IPV6;
 	}
+#endif
 	default:
 		return NULL;
 	}
