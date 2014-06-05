@@ -1,7 +1,10 @@
 ChangeLog
 ==========
 
-version 1.0.3 (released 2014-06-02)
+version 1.1.1 (released 2014-06-05)
+  * Disable incomplete address in use check in bind().
+
+version 1.1.0 (released 2014-06-02)
   * Added support for IP_PKTINFO in recvmsg().
   * Added support for IPV6_PKTINFO in recvmsg().
   * Added support for IP_RECVDSTADDR in recvmsg() on BSD.
