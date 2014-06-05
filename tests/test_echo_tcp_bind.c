@@ -154,6 +154,7 @@ static void test_bind_ipv4(void **state)
 	close(s);
 }
 
+#if 0 /* TODO */
 static void test_bind_ipv4_addr_in_use(void **state)
 {
 	struct sockaddr_in sin, sin2;
@@ -307,6 +308,7 @@ static void test_bind_ipv4_addr_in_use(void **state)
 
 	close(s);
 }
+#endif
 
 #ifdef HAVE_BINDRESVPORT
 static void test_bindresvport_ipv4(void **state)
@@ -469,9 +471,11 @@ int main(void) {
 		unit_test_setup_teardown(test_bind_ipv4,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
+#if 0 /* TODO */
 		unit_test_setup_teardown(test_bind_ipv4_addr_in_use,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
+#endif
 #ifdef HAVE_BINDRESVPORT
 		unit_test_setup_teardown(test_bindresvport_ipv4,
 					 setup_echo_srv_tcp_ipv4,
