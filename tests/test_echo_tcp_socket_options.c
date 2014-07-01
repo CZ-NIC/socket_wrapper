@@ -101,8 +101,10 @@ static void test_sockopt_so(void **state)
 #ifdef SO_DOMAIN
 	int so_domain = -1;
 #endif /* SO_DOMAIN */
+#ifdef SO_PROTOCOL
 	int so_protocol = -1;
 	int so_type = -1;
+#endif /* SO_PROTOCOL */
 	int rc;
 	int s;
 
@@ -135,6 +137,7 @@ static void test_sockopt_so(void **state)
 	assert_int_equal(so_len, sizeof(int));
 #endif /* SO_DOMAIN */
 
+#ifdef SO_PROTOCOL
 	so_len = sizeof(so_protocol);
 	rc = getsockopt(s,
 			SOL_SOCKET,
@@ -154,6 +157,7 @@ static void test_sockopt_so(void **state)
 	assert_return_code(rc, errno);
 	assert_int_equal(so_type, SOCK_STREAM);
 	assert_int_equal(so_len, sizeof(int));
+#endif /* SO_PROTOCOL */
 
 	close(s);
 }
@@ -163,12 +167,14 @@ static void test_sockopt_so6(void **state)
 {
 	struct sockaddr_in6 sin6;
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	socklen_t so_len;
 #ifdef SO_DOMAIN
 	int so_domain = -1;
 #endif /* SO_DOMAIN */
+#ifdef SO_PROTOCOL
+	socklen_t so_len;
 	int so_protocol = -1;
 	int so_type = -1;
+#endif /* SO_PROTOCOL */
 	int rc;
 	int s;
 
@@ -201,6 +207,7 @@ static void test_sockopt_so6(void **state)
 	assert_int_equal(so_len, sizeof(int));
 #endif /* SO_DOMAIN */
 
+#ifdef SO_PROTOCOL
 	so_len = sizeof(so_protocol);
 	rc = getsockopt(s,
 			SOL_SOCKET,
@@ -220,6 +227,7 @@ static void test_sockopt_so6(void **state)
 	assert_return_code(rc, errno);
 	assert_int_equal(so_type, SOCK_STREAM);
 	assert_int_equal(so_len, sizeof(int));
+#endif /* SO_PROTOCOL */
 
 	close(s);
 }
