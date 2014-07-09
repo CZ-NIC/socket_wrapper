@@ -1,44 +1,24 @@
-Socket wrapper library
-=======================
+SOCKET_WRAPPER
+==============
 
-This library makes possible to run several instances of the full software stack
-on the same machine and perform locally functional testing of complex network
-configurations. It passes all socket communication over unix domain sockets.
+This is a library passing all socket communications through unix sockets.
 
-The user defines a directory where to put all the unix sockets using the
-envionment variable "SOCKET_WRAPPER_DIR=/path/to/socket_dir". When a server
-opens a port or a client wants to connect, socket_wrapper will translate IP
-addresses to a special socket_wrapper name and look for the relevant unix
-socket in the SOCKET_WRAPPER_DIR.
+DESCRIPTION
+-----------
 
-Additionally, the default interface to be used by an application is defined
-with "SOCKET_WRAPPER_DEFAULT_IFACE=<ID>" where <ID> is between 2 and 254. This
-is analogous to use the IPv4 addresses "127.0.0.<ID>" or IPv6 addresses
-"fd00::5357:5f<IDx>" (where <IDx> is a hexadecimal presentation of <ID>). You
-should always set the default interface. If you listen on INADDR_ANY then it
-will use the default interface to listen on.
+More details can be found in the manpage:
 
-Example:
-LD_PRELOAD=libsocket_wrapper.so \
-SOCKET_WRAPPER_DIR=/path/to/socket_dir \
-./mydaemon
+  man -l ./doc/socket_wrapper.1
 
-The following environment variables could also be set:
+or the raw text version:
 
-SOCKET_WRAPPER_DEFAULT_IFACE
-    The default interface to use if nothing has
-    been set trough the functions.
-    Set it to '11' for '127.0.0.11'.
+  less ./doc/socket_wrapper.1.txt
 
-SOCKET_WRAPPER_PCAP_FILE
-    If set then all traffic will be written to the
-    specified pcap file.
+For installation instructions please take a look at the README.install file.
 
-SOCKET_WRAPPER_DEBUGLEVEL
-   If you socket_wrapper with with debug symbols
-   you can turn on logging by setting this to an
-   integer between 1 and 3.
-   0 = ERROR
-   1 = WARNING
-   2 = DEBUG
-   3 = TRACE
+MAILINGLIST
+-----------
+
+As the mailing list samba-technical is used and can be found here:
+
+https://lists.samba.org/mailman/listinfo/samba-technical

@@ -1,0 +1,197 @@
+'\" t
+.\"     Title: socket_wrapper
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 07/09/2014
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "SOCKET_WRAPPER" "1" "07/09/2014" "\ \&" "\ \&"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+socket_wrapper \- A library passing all socket communications through unix sockets\&.
+.SH "SYNOPSIS"
+.sp
+LD_PRELOAD=libsocket_wrapper\&.so SOCKET_WRAPPER_DIR=/tmp/tmp\&.bQRELqDrhM SOCKET_WRAPPER_DEFAULT_IFACE=10 \fB\&./myapplication\fR
+.SH "DESCRIPTION"
+.sp
+socket_wrapper aims to help client/server software development teams willing to gain full functional test coverage\&. It makes possible to run several instances of the full software stack on the same machine and perform locally functional testing of complex network configurations\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Redirects all network communication to happen over unix sockets\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Support for IPv4 and IPv6 socket and addressing emulation\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Ablility to capture network traffic in pcap format\&.
+.RE
+.SH "ENVIRONMENT VARIABLES"
+.PP
+\fBSOCKET_WRAPPER_DIR\fR
+.RS 4
+The user defines a directory where to put all the unix sockets using the envionment variable "SOCKET_WRAPPER_DIR=/path/to/socket_dir"\&. When a server opens a port or a client wants to connect, socket_wrapper will translate IP addresses to a special socket_wrapper name and look for the relevant unix socket in the SOCKET_WRAPPER_DIR\&.
+.RE
+.PP
+\fBSOCKET_WRAPPER_DEFAULT_IFACE\fR
+.RS 4
+Additionally, the default interface to be used by an application is defined with "SOCKET_WRAPPER_DEFAULT_IFACE=<ID>" where <ID> is between 2 and 254\&. This is analogous to use the IPv4 addresses "127\&.0\&.0\&.<ID>" or IPv6 addresses "fd00::5357:5f<IDx>" (where <IDx> is a hexadecimal presentation of <ID>)\&. You should always set the default interface\&. If you listen on INADDR_ANY then it will use the default interface to listen on\&.
+.RE
+.PP
+\fBSOCKET_WRAPPER_PCAP_FILE\fR
+.RS 4
+When debugging, it is often interesting to investigate the network traffic between the client and server within your application\&. If you define SOCKET_WRAPPER_PCAP_FILE=/path/to/file\&.pcap, socket_wrapper will dump all your network traffic to the specified file\&. After the test has been finished you\(cqre able to open the file for example with Wireshark\&.
+.RE
+.PP
+\fBSOCKET_WRAPPER_DEBUGLEVEL\fR
+.RS 4
+If you need to see what is going on in socket_wrapper itself or try to find a bug, you can enable logging support in socket_wrapper if you built it with debug symbols\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+0 = ERROR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+1 = WARNING
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+2 = DEBUG
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+3 = TRACE
+.RE
+.RE
+.SH "EXAMPLE"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# Open a console and create a directory for the unix sockets\&.
+$ mktemp \-d
+/tmp/tmp\&.bQRELqDrhM
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# Then start nc to listen for network traffic using the temporary directory\&.
+$ LD_PRELOAD=libsocket_wrapper\&.so \e
+  SOCKET_WRAPPER_DIR=/tmp/tmp\&.bQRELqDrhM \e
+  SOCKET_WRAPPER_DEFAULT_IFACE=10 nc \-v \-l 127\&.0\&.0\&.10 7
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# (If nc, listens on 0\&.0\&.0\&.0 then listener will be open on 127\&.0\&.0\&.10 because
+#  it is the default interface)
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# Now open another console and start \*(Aqnc\*(Aq as a client to connect to the server:
+$ LD_PRELOAD=libsocket_wrapper\&.so \e
+  SOCKET_WRAPPER_DIR=/tmp/tmp\&.bQRELqDrhM \e
+  SOCKET_WRAPPER_DEFAULT_IFACE=100 nc \-v 127\&.0\&.0\&.10 7
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# (The client will use the address 127\&.0\&.0\&.100 when connecting to the server)
+# Now you can type \*(AqHello!\*(Aq which will be sent to the server and should appear
+# in the console output of the server\&.
+.fi
+.if n \{\
+.RE
+.\}
