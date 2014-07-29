@@ -21,6 +21,10 @@ if (UNIX AND NOT WIN32)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=int-to-pointer-cast -Werror=pointer-to-int-cast")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
+	if (OSX)
+	    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__APPLE_USE_RFC_3542")
+	endif (OSX)
+
         # with -fPIC
         check_c_compiler_flag("-fPIC" WITH_FPIC)
         if (WITH_FPIC)
