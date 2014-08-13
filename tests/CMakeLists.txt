@@ -6,7 +6,6 @@ include_directories(
   ${CMOCKA_INCLUDE_DIR}
 )
 
-add_definitions(-D_GNU_SOURCE)
 set(TORTURE_LIBRARY torture)
 
 # RFC862 echo server

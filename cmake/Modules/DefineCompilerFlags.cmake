@@ -19,6 +19,7 @@ if (UNIX AND NOT WIN32)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=pointer-arith -Werror=declaration-after-statement")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=implicit-function-declaration -Werror=write-strings")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=int-to-pointer-cast -Werror=pointer-to-int-cast")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
         # with -fPIC
         check_c_compiler_flag("-fPIC" WITH_FPIC)

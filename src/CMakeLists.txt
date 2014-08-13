@@ -2,11 +2,6 @@ project(libsocket_wrapper C)
 
 include_directories(${CMAKE_BINARY_DIR})
 
-set_source_files_properties(socket_wrapper.c
-    PROPERTIES
-        COMPILE_DEFINITIONS
-            _GNU_SOURCE)
-
 add_library(socket_wrapper SHARED socket_wrapper.c)
 
 target_link_libraries(socket_wrapper ${SWRAP_REQUIRED_LIBRARIES})
