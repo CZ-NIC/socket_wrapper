@@ -47,6 +47,18 @@
 #define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
 #endif
 
+struct torture_address {
+	socklen_t sa_socklen;
+	union {
+		struct sockaddr s;
+		struct sockaddr_in in;
+#ifdef HAVE_IPV6
+		struct sockaddr_in6 in6;
+#endif
+		struct sockaddr_storage ss;
+	} sa;
+};
+
 struct echo_srv_opts {
     int port;
     int socktype;
@@ -310,41 +322,43 @@ static int setup_srv(struct echo_srv_opts *opts, int *_sock)
 
 static int socket_dup(int s)
 {
-    struct sockaddr_storage cli_ss1;
-    socklen_t cli_ss1_len;
-    struct sockaddr_storage srv_ss1;
-    socklen_t srv_ss1_len;
+    struct torture_address cli_addr1 = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
+    struct torture_address srv_addr1 = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
 
-    struct sockaddr_storage cli_ss2;
-    socklen_t cli_ss2_len;
-    struct sockaddr_storage srv_ss2;
-    socklen_t srv_ss2_len;
+    struct torture_address cli_addr2 = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
+    struct torture_address srv_addr2 = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
 
-    struct sockaddr_storage cli_ss3;
-    socklen_t cli_ss3_len;
-    struct sockaddr_storage srv_ss3;
-    socklen_t srv_ss3_len;
+    struct torture_address cli_addr3 = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
+    struct torture_address srv_addr3 = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
 
     int s2;
     int rc;
 
-    ZERO_STRUCT(srv_ss1);
-    srv_ss1_len = sizeof(srv_ss1);
-    rc = getsockname(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+    rc = getsockname(s, &srv_addr1.sa.s, &srv_addr1.sa_socklen);
     if (rc == -1) {
         perror("getsockname");
         return -1;
     }
 
-    ZERO_STRUCT(cli_ss1);
-    cli_ss1_len = sizeof(cli_ss1);
-    rc = getpeername(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+    rc = getpeername(s, &cli_addr1.sa.s, &cli_addr1.sa_socklen);
     if (rc == -1) {
         perror("getpeername");
         return -1;
     }
 
-    if (cli_ss1.ss_family != srv_ss1.ss_family) {
+    if (cli_addr1.sa.ss.ss_family != srv_addr1.sa.ss.ss_family) {
         perror("client/server family mismatch");
         return -1;
     }
@@ -357,63 +371,47 @@ static int socket_dup(int s)
     }
     close(s);
 
-    ZERO_STRUCT(srv_ss2);
-    srv_ss2_len = sizeof(srv_ss2);
-    rc = getsockname(s2, (struct sockaddr *)&srv_ss2, &srv_ss2_len);
+    rc = getsockname(s2, &srv_addr2.sa.s, &srv_addr2.sa_socklen);
     if (rc == -1) {
         perror("getsockname");
         close(s2);
         return -1;
     }
 
-    ZERO_STRUCT(cli_ss2);
-    cli_ss2_len = sizeof(cli_ss2);
-    rc = getpeername(s2, (struct sockaddr *)&cli_ss2, &cli_ss2_len);
+    rc = getpeername(s2, &cli_addr2.sa.s, &cli_addr2.sa_socklen);
     if (rc == -1) {
         perror("getpeername");
         close(s2);
         return -1;
     }
 
-    if (cli_ss1_len != cli_ss2_len ||
-        srv_ss1_len != srv_ss2_len) {
+    if (cli_addr1.sa_socklen != cli_addr2.sa_socklen ||
+        srv_addr1.sa_socklen != srv_addr2.sa_socklen) {
         perror("length mismatch");
         close(s2);
         return -1;
     }
 
-    switch(cli_ss1.ss_family) {
+    switch(cli_addr1.sa.ss.ss_family) {
     case AF_INET: {
-        struct sockaddr_in *cli_sinp1 = (struct sockaddr_in *)&cli_ss1;
-        struct sockaddr_in *cli_sinp2 = (struct sockaddr_in *)&cli_ss2;
-
-        struct sockaddr_in *srv_sinp1 = (struct sockaddr_in *)&srv_ss1;
-        struct sockaddr_in *srv_sinp2 = (struct sockaddr_in *)&srv_ss2;
-
-        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in));
+        rc = memcmp(&cli_addr1.sa.in, &cli_addr2.sa.in, sizeof(struct sockaddr_in));
         if (rc != 0) {
             perror("client mismatch");
         }
 
-        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in));
+        rc = memcmp(&srv_addr1.sa.in, &srv_addr2.sa.in, sizeof(struct sockaddr_in));
         if (rc != 0) {
             perror("server mismatch");
         }
         break;
     }
     case AF_INET6: {
-        struct sockaddr_in6 *cli_sinp1 = (struct sockaddr_in6 *)&cli_ss1;
-        struct sockaddr_in6 *cli_sinp2 = (struct sockaddr_in6 *)&cli_ss2;
-
-        struct sockaddr_in6 *srv_sinp1 = (struct sockaddr_in6 *)&srv_ss1;
-        struct sockaddr_in6 *srv_sinp2 = (struct sockaddr_in6 *)&srv_ss2;
-
-        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in6));
+        rc = memcmp(&cli_addr1.sa.in6, &cli_addr2.sa.in6, sizeof(struct sockaddr_in6));
         if (rc != 0) {
             perror("client mismatch");
         }
 
-        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in6));
+        rc = memcmp(&srv_addr1.sa.in6, &srv_addr2.sa.in6, sizeof(struct sockaddr_in6));
         if (rc != 0) {
             perror("server mismatch");
         }
@@ -433,63 +431,47 @@ static int socket_dup(int s)
         return -1;
     }
 
-    ZERO_STRUCT(srv_ss3);
-    srv_ss3_len = sizeof(srv_ss3);
-    rc = getsockname(s, (struct sockaddr *)&srv_ss3, &srv_ss3_len);
+    rc = getsockname(s, &srv_addr3.sa.s, &srv_addr3.sa_socklen);
     if (rc == -1) {
         perror("getsockname");
         close(s);
         return -1;
     }
 
-    ZERO_STRUCT(cli_ss3);
-    cli_ss3_len = sizeof(cli_ss3);
-    rc = getpeername(s, (struct sockaddr *)&cli_ss3, &cli_ss3_len);
+    rc = getpeername(s, &cli_addr3.sa.s, &cli_addr3.sa_socklen);
     if (rc == -1) {
         perror("getpeername");
         close(s);
         return -1;
     }
 
-    if (cli_ss2_len != cli_ss3_len ||
-        srv_ss2_len != srv_ss3_len) {
+    if (cli_addr2.sa_socklen != cli_addr3.sa_socklen ||
+        srv_addr2.sa_socklen != srv_addr3.sa_socklen) {
         perror("length mismatch");
         close(s);
         return -1;
     }
 
-    switch(cli_ss2.ss_family) {
+    switch(cli_addr2.sa.ss.ss_family) {
     case AF_INET: {
-        struct sockaddr_in *cli_sinp1 = (struct sockaddr_in *)&cli_ss2;
-        struct sockaddr_in *cli_sinp2 = (struct sockaddr_in *)&cli_ss3;
-
-        struct sockaddr_in *srv_sinp1 = (struct sockaddr_in *)&srv_ss2;
-        struct sockaddr_in *srv_sinp2 = (struct sockaddr_in *)&srv_ss3;
-
-        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in));
+        rc = memcmp(&cli_addr1.sa.in, &cli_addr2.sa.in, sizeof(struct sockaddr_in));
         if (rc != 0) {
             perror("client mismatch");
         }
 
-        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in));
+        rc = memcmp(&srv_addr1.sa.in, &srv_addr2.sa.in, sizeof(struct sockaddr_in));
         if (rc != 0) {
             perror("server mismatch");
         }
         break;
     }
     case AF_INET6: {
-        struct sockaddr_in6 *cli_sinp1 = (struct sockaddr_in6 *)&cli_ss2;
-        struct sockaddr_in6 *cli_sinp2 = (struct sockaddr_in6 *)&cli_ss3;
-
-        struct sockaddr_in6 *srv_sinp1 = (struct sockaddr_in6 *)&srv_ss2;
-        struct sockaddr_in6 *srv_sinp2 = (struct sockaddr_in6 *)&srv_ss3;
-
-        rc = memcmp(cli_sinp1, cli_sinp2, sizeof(struct sockaddr_in6));
+        rc = memcmp(&cli_addr1.sa.in6, &cli_addr2.sa.in6, sizeof(struct sockaddr_in6));
         if (rc != 0) {
             perror("client mismatch");
         }
 
-        rc = memcmp(srv_sinp1, srv_sinp2, sizeof(struct sockaddr_in6));
+        rc = memcmp(&srv_addr1.sa.in6, &srv_addr2.sa.in6, sizeof(struct sockaddr_in6));
         if (rc != 0) {
             perror("server mismatch");
         }
@@ -506,8 +488,9 @@ static int socket_dup(int s)
 
 static void echo_tcp(int sock)
 {
-    struct sockaddr_storage css;
-    socklen_t addrlen = sizeof(css);
+    struct torture_address addr = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
 
     char buf[BUFSIZE];
     ssize_t bret;
@@ -515,7 +498,7 @@ static void echo_tcp(int sock)
     int client_sock = -1;
     int s;
 
-    s = accept(sock, (struct sockaddr *)&css, &addrlen);
+    s = accept(sock, &addr.sa.s, &addr.sa_socklen);
     if (s == -1) {
         perror("accept");
 	goto done;
@@ -605,8 +588,9 @@ static ssize_t echo_udp_recv_from_to(int sock,
 				char ip[INET_ADDRSTRLEN] = { 0 };
 				struct sockaddr_in *sinp = (struct sockaddr_in *)to;
 				struct in_pktinfo *pkt;
+				void *cmsg_cast_ptr = CMSG_DATA(cmsgptr);
 
-				pkt = (struct in_pktinfo *)CMSG_DATA(cmsgptr);
+				pkt = (struct in_pktinfo *)cmsg_cast_ptr;
 
 				sinp->sin_family = AF_INET;
 				sinp->sin_addr = pkt->ipi_addr;
@@ -630,8 +614,9 @@ static ssize_t echo_udp_recv_from_to(int sock,
 				char ip[INET_ADDRSTRLEN] = { 0 };
 				struct sockaddr_in *sinp = (struct sockaddr_in *)to;
 				struct in_addr *addr;
+				void *cmsg_cast_ptr = CMSG_DATA(cmsgptr);
 
-				addr = (struct in_addr *)CMSG_DATA(cmsgptr);
+				addr = (struct in_addr *)cmsg_cast_ptr;
 
 				sinp->sin_family = AF_INET;
 				sinp->sin_addr = *addr;
@@ -655,8 +640,9 @@ static ssize_t echo_udp_recv_from_to(int sock,
 				char ip[INET6_ADDRSTRLEN] = { 0 };
 				struct in6_pktinfo *pkt6;
 				struct sockaddr_in6 *sin6p = (struct sockaddr_in6 *)to;
+				void *cmsg_cast_ptr = CMSG_DATA(cmsgptr);
 
-				pkt6 = (struct in6_pktinfo *)CMSG_DATA(cmsgptr);
+				pkt6 = (struct in6_pktinfo *)cmsg_cast_ptr;
 
 				sin6p->sin6_family = AF_INET6;
 				sin6p->sin6_addr = pkt6->ipi6_addr;
@@ -725,10 +711,11 @@ static ssize_t echo_udp_send_to_from(int sock,
 	switch (from->sa_family) {
 #if defined(IP_PKTINFO) || defined(IP_SENDSRCADDR)
 	case AF_INET: {
+		void *cmsg_cast_ptr = CMSG_DATA(cmsgptr);
 #ifdef IP_PKTINFO
-		struct in_pktinfo *p = (struct in_pktinfo *)CMSG_DATA(cmsgptr);
+		struct in_pktinfo *p = (struct in_pktinfo *)cmsg_cast_ptr;
 #elif defined(IP_SENDSRCADDR)
-		struct in_addr *p = (struct in_addr *)CMSG_DATA(cmsgptr);
+		struct in_addr *p = (struct in_addr *)cmsg_cast_ptr;
 #endif
 		const struct sockaddr_in *from4 = (const struct sockaddr_in *)from;
 
@@ -753,7 +740,8 @@ static ssize_t echo_udp_send_to_from(int sock,
 #endif /* IP_PKTINFO || IP_SENDSRCADDR */
 #ifdef IPV6_PKTINFO
 	case AF_INET6: {
-		struct in6_pktinfo *p = (struct in6_pktinfo *)CMSG_DATA(cmsgptr);
+        void *cast_ptr = CMSG_DATA(cmsgptr);
+		struct in6_pktinfo *p = (struct in6_pktinfo *)cast_ptr;
 		const struct sockaddr_in6 *from6 = (const struct sockaddr_in6 *)from;
 
 		if (fromlen != sizeof(struct sockaddr_in6)) {
@@ -783,27 +771,37 @@ static ssize_t echo_udp_send_to_from(int sock,
 
 static void echo_udp(int sock)
 {
-    struct sockaddr_storage saddr;
-    struct sockaddr_storage daddr;
-    socklen_t saddrlen = sizeof(saddr);
-    socklen_t daddrlen = sizeof(daddr);
+    struct torture_address saddr = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
+    struct torture_address daddr = {
+        .sa_socklen = sizeof(struct sockaddr_storage),
+    };
     ssize_t bret;
     char buf[BUFSIZE];
 
     while (1) {
         bret = echo_udp_recv_from_to(sock,
-                                     buf, BUFSIZE, 0,
-                                     (struct sockaddr *)&saddr, &saddrlen,
-                                     (struct sockaddr *)&daddr, &daddrlen);
+                                     buf,
+                                     BUFSIZE,
+                                     0,
+                                     &saddr.sa.s,
+                                     &saddr.sa_socklen,
+                                     &daddr.sa.s,
+                                     &daddr.sa_socklen);
         if (bret == -1) {
             perror("recvfrom");
             continue;
         }
 
         bret = echo_udp_send_to_from(sock,
-                                     buf, bret, 0,
-                                     (struct sockaddr *)&saddr, saddrlen,
-                                     (struct sockaddr *)&daddr, daddrlen);
+                                     buf,
+                                     bret,
+                                     0,
+                                     &saddr.sa.s,
+                                     saddr.sa_socklen,
+                                     &daddr.sa.s,
+                                     daddr.sa_socklen);
         if (bret == -1) {
             perror("sendto");
             continue;
