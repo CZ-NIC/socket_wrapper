@@ -26,15 +26,16 @@ static void teardown(void **state)
 	torture_teardown_echo_srv(state);
 }
 
-static void _assert_sockaddr_equal(struct sockaddr_storage *ss, const char *a,
+static void _assert_sockaddr_equal(struct torture_address *addr, const char *a,
 				   const char * const file, const int line)
 {
 	char ip[INET6_ADDRSTRLEN] = { 0 };
-	struct sockaddr_in *sinp = (struct sockaddr_in *)ss;
 	const char *p;
 
-	p = inet_ntop(ss->ss_family,
-		      &sinp->sin_addr,
+	p = inet_ntop(addr->sa.ss.ss_family,
+		      addr->sa.ss.ss_family == AF_INET6 ?
+		          (void *)&addr->sa.in6.sin6_addr :
+		          (void *)&addr->sa.in.sin_addr,
 		      ip,
 		      sizeof(ip));
 	_assert_true(cast_ptr_to_largest_integral_type(p),
@@ -46,29 +47,49 @@ static void _assert_sockaddr_equal(struct sockaddr_storage *ss, const char *a,
 #define assert_sockaddr_equal(ss, a) \
 	_assert_sockaddr_equal(ss, a, __FILE__, __LINE__)
 
-static void _assert_sockaddr_port_equal(struct sockaddr_storage *ss, const char *a,
+static void _assert_sockaddr_port_equal(struct torture_address *addr,
+					const char *a,
 					uint16_t port,
 					const char * const file, const int line)
 {
-	struct sockaddr_in *sinp = (struct sockaddr_in *)ss;
+	uint16_t n_port;
 
-	_assert_sockaddr_equal(ss, a, file, line);
+	_assert_sockaddr_equal(addr, a, file, line);
 
-	_assert_int_equal(ntohs(sinp->sin_port), port, file, line);
+	switch(addr->sa.ss.ss_family) {
+	case AF_INET:
+		n_port = addr->sa.in.sin_port;
+	case AF_INET6:
+		n_port = addr->sa.in6.sin6_port;
+	default:
+		return;
+	}
+
+	_assert_int_equal(ntohs(n_port), port, file, line);
 }
 
 #define assert_sockaddr_port_equal(ss, a, prt) \
 	_assert_sockaddr_port_equal(ss, a, prt, __FILE__, __LINE__)
 
-static void _assert_sockaddr_port_range_equal(struct sockaddr_storage *ss, const char *a,
+static void _assert_sockaddr_port_range_equal(struct torture_address *addr,
+					      const char *a,
 					      uint16_t min_port, uint16_t max_port,
 					      const char * const file, const int line)
 {
-	struct sockaddr_in *sinp = (struct sockaddr_in *)ss;
+	uint16_t n_port;
 
-	_assert_sockaddr_equal(ss, a, file, line);
+	_assert_sockaddr_equal(addr, a, file, line);
 
-	_assert_in_range(ntohs(sinp->sin_port),
+	switch(addr->sa.ss.ss_family) {
+	case AF_INET:
+		n_port = addr->sa.in.sin_port;
+	case AF_INET6:
+		n_port = addr->sa.in6.sin6_port;
+	default:
+		return;
+	}
+
+	_assert_in_range(ntohs(n_port),
 			 min_port,
 			 max_port,
 			 file,
@@ -80,12 +101,15 @@ static void _assert_sockaddr_port_range_equal(struct sockaddr_storage *ss, const
 
 static void test_connect_getsockname_getpeername(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_storage cli_ss1;
-	socklen_t cli_ss1_len;
-	struct sockaddr_storage srv_ss1;
-	socklen_t srv_ss1_len;
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address cli_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address srv_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	int rc;
 	int s;
 
@@ -95,61 +119,69 @@ static void test_connect_getsockname_getpeername(void **state)
 	assert_return_code(s, errno);
 
 	/* Bind client address to wildcard address */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
+	addr.sa.in.sin_family = AF_INET;
 
-	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	rc = inet_pton(AF_INET, "127.0.0.20", &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_range_equal(&cli_ss1, "127.0.0.20", 1024, 65535);
+	assert_sockaddr_port_range_equal(&cli_addr, "127.0.0.20", 1024, 65535);
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getpeername(s, &addr.sa.s, &addr.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, ENOTCONN);
 
 	/* connect */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_in),
+		.sa.in = (struct sockaddr_in) {
+			.sin_family = AF_INET,
+			.sin_port = htons(torture_server_port()),
+		},
+	};
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
 	/* Connect */
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
-	assert_return_code(rc, errno);
-	assert_sockaddr_port_range_equal(&cli_ss1, "127.0.0.20", 1024, 65535);
+	cli_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&srv_ss1, "127.0.0.10", 7);
+	assert_sockaddr_port_range_equal(&cli_addr, "127.0.0.20", 1024, 65535);
+
+	srv_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
+	assert_return_code(rc, errno);
+	assert_sockaddr_port_equal(&srv_addr, "127.0.0.10", 7);
 
 	close(s);
 }
 
 static void test_connect_getsockname_getpeername_port(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_storage cli_ss1;
-	socklen_t cli_ss1_len;
-	struct sockaddr_storage srv_ss1;
-	socklen_t srv_ss1_len;
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address cli_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address srv_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	int rc;
 	int s;
 
@@ -159,62 +191,71 @@ static void test_connect_getsockname_getpeername_port(void **state)
 	assert_return_code(s, errno);
 
 	/* Bind client address to wildcard address */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
+	addr.sa.in.sin_family = AF_INET;
 
-	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	rc = inet_pton(AF_INET, "127.0.0.20", &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
-	sin.sin_port = htons(12345);
+	addr.sa.in.sin_port = htons(12345);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&cli_ss1, "127.0.0.20", 12345);
+	assert_sockaddr_port_equal(&cli_addr, "127.0.0.20", 12345);
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, ENOTCONN);
 
 	/* connect */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_in),
+		.sa.in = (struct sockaddr_in) {
+			.sin_family = AF_INET,
+			.sin_port = htons(torture_server_port()),
+		},
+	};
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
 	/* Connect */
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
-	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&cli_ss1, "127.0.0.20", 12345);
+	cli_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&srv_ss1, "127.0.0.10", 7);
+	assert_sockaddr_port_equal(&cli_addr, "127.0.0.20", 12345);
+
+	srv_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
+	assert_return_code(rc, errno);
+	assert_sockaddr_port_equal(&srv_addr, "127.0.0.10", 7);
 
 	close(s);
 }
 
 static void test_connect_getsockname_getpeername_any(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_storage cli_ss1;
-	socklen_t cli_ss1_len;
-	struct sockaddr_storage srv_ss1;
-	socklen_t srv_ss1_len;
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address cli_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address srv_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	int rc;
 	int s;
 
@@ -224,59 +265,62 @@ static void test_connect_getsockname_getpeername_any(void **state)
 	assert_return_code(s, errno);
 
 	/* Bind client address to wildcard address */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_range_equal(&cli_ss1, "0.0.0.0", 1024, 65535);
+	assert_sockaddr_port_range_equal(&cli_addr, "0.0.0.0", 1024, 65535);
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, ENOTCONN);
 
 	/* connect */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
 	/* Connect */
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
-	assert_return_code(rc, errno);
-	assert_sockaddr_port_range_equal(&cli_ss1, "127.0.0.20", 1024, 65535);
+	cli_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&srv_ss1, "127.0.0.10", 7);
+	assert_sockaddr_port_range_equal(&cli_addr, "127.0.0.20", 1024, 65535);
+
+	srv_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
+	assert_return_code(rc, errno);
+	assert_sockaddr_port_equal(&srv_addr, "127.0.0.10", 7);
 
 	close(s);
 }
 
 static void test_connect_getsockname_getpeername_any_port(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_storage cli_ss1;
-	socklen_t cli_ss1_len;
-	struct sockaddr_storage srv_ss1;
-	socklen_t srv_ss1_len;
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address cli_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address srv_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	int rc;
 	int s;
 
@@ -286,60 +330,63 @@ static void test_connect_getsockname_getpeername_any_port(void **state)
 	assert_return_code(s, errno);
 
 	/* Bind client address to wildcard address */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(INADDR_ANY);
-	sin.sin_port = htons(12345);
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sa.in.sin_port = htons(12345);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&cli_ss1, "0.0.0.0", 12345);
+	assert_sockaddr_port_equal(&cli_addr, "0.0.0.0", 12345);
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, ENOTCONN);
 
 	/* connect */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
 	/* Connect */
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = sizeof(cli_ss1);
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
-	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&cli_ss1, "127.0.0.20", 12345);
+	cli_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = sizeof(srv_ss1);
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_sockaddr_port_equal(&srv_ss1, "127.0.0.10", 7);
+	assert_sockaddr_port_equal(&cli_addr, "127.0.0.20", 12345);
+
+	srv_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
+	assert_return_code(rc, errno);
+	assert_sockaddr_port_equal(&srv_addr, "127.0.0.10", 7);
 
 	close(s);
 }
 
 static void test_connect_getsockname_getpeername_len(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_storage cli_ss1;
-	socklen_t cli_ss1_len;
-	struct sockaddr_storage srv_ss1;
-	socklen_t srv_ss1_len;
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address cli_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address srv_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	socklen_t tmp_len;
 	int rc;
 	int s;
@@ -350,39 +397,44 @@ static void test_connect_getsockname_getpeername_len(void **state)
 	assert_return_code(s, errno);
 
 	/* connect */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
 	/* Connect */
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.in, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
 	/* Check with len=0 */
-	ZERO_STRUCT(cli_ss1);
-	cli_ss1_len = 0;
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
+	cli_addr.sa_socklen = 0;
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(srv_ss1);
-	srv_ss1_len = 0;
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	srv_addr.sa_socklen = 0;
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
 	assert_return_code(rc, errno);
 
 	/* Check with len=too small */
-	ZERO_STRUCT(cli_ss1);
-	tmp_len = cli_ss1_len = sizeof(struct sockaddr_in) - 2;
-	rc = getsockname(s, (struct sockaddr *)&cli_ss1, &cli_ss1_len);
-	assert_return_code(rc, errno);
-	assert_int_equal(tmp_len + 2, cli_ss1_len);
+	cli_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_in) - 2,
+	};
 
-	ZERO_STRUCT(srv_ss1);
-	tmp_len = srv_ss1_len = sizeof(struct sockaddr_in) - 2;
-	rc = getpeername(s, (struct sockaddr *)&srv_ss1, &srv_ss1_len);
+	tmp_len = cli_addr.sa_socklen;
+	rc = getsockname(s, &cli_addr.sa.s, &cli_addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_int_equal(tmp_len + 2, srv_ss1_len);
+	assert_int_equal(tmp_len + 2, cli_addr.sa_socklen);
+
+	srv_addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_in) - 2,
+	};
+
+	tmp_len = srv_addr.sa_socklen;
+	rc = getpeername(s, &srv_addr.sa.s, &srv_addr.sa_socklen);
+	assert_return_code(rc, errno);
+	assert_int_equal(tmp_len + 2, srv_addr.sa_socklen);
 
 	close(s);
 }

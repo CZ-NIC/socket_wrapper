@@ -44,8 +44,9 @@ static void teardown(void **state)
 
 static void test_sockopt_sndbuf(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	int obufsize = 0;
 	socklen_t olen = sizeof(obufsize);
 	int gbufsize = 0;
@@ -59,16 +60,15 @@ static void test_sockopt_sndbuf(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
 
-	rc = inet_pton(sin.sin_family,
+	rc = inet_pton(addr.sa.in.sin_family,
 		       torture_server_address(AF_INET),
-		       &sin.sin_addr);
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 	rc = getsockopt(s, SOL_SOCKET, SO_SNDBUF, &obufsize, &olen);
@@ -95,8 +95,9 @@ static void test_sockopt_sndbuf(void **state)
 
 static void test_sockopt_so(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	socklen_t so_len;
 #ifdef SO_DOMAIN
 	int so_domain = -1;
@@ -113,16 +114,15 @@ static void test_sockopt_so(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
 
-	rc = inet_pton(sin.sin_family,
+	rc = inet_pton(addr.sa.in.sin_family,
 		       torture_server_address(AF_INET),
-		       &sin.sin_addr);
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.in, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 #ifdef SO_DOMAIN
@@ -165,8 +165,9 @@ static void test_sockopt_so(void **state)
 #ifdef HAVE_IPV6
 static void test_sockopt_so6(void **state)
 {
-	struct sockaddr_in6 sin6;
-	socklen_t slen = sizeof(struct sockaddr_in6);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 #ifdef SO_DOMAIN
 	int so_domain = -1;
 #endif /* SO_DOMAIN */
@@ -183,16 +184,15 @@ static void test_sockopt_so6(void **state)
 	s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin6);
-	sin6.sin6_family = AF_INET6;
-	sin6.sin6_port = htons(torture_server_port());
+	addr.sa.in6.sin6_family = AF_INET6;
+	addr.sa.in6.sin6_port = htons(torture_server_port());
 
-	rc = inet_pton(sin6.sin6_family,
+	rc = inet_pton(addr.sa.in6.sin6_family,
 		       torture_server_address(AF_INET6),
-		       &sin6.sin6_addr);
+		       &addr.sa.in6.sin6_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin6, slen);
+	rc = connect(s, &addr.sa.in6, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 #ifdef SO_DOMAIN

@@ -36,12 +36,15 @@ static void teardown(void **state)
 
 static void test_bind_ipv4(void **state)
 {
-	struct sockaddr sa;
-	socklen_t salen = sizeof(struct sockaddr);
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_un addr_un;
-	socklen_t sulen = sizeof(struct sockaddr_un);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address addr_in = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address addr_un = {
+		.sa_socklen = sizeof(struct sockaddr_un),
+	};
 	int rc;
 	int s;
 
@@ -56,34 +59,34 @@ static void test_bind_ipv4(void **state)
 
 	/* UNSPEC, len == 1: EINVAL */
 
-	sin = (struct sockaddr_in) {
+	addr_in.sa.in = (struct sockaddr_in) {
 		.sin_family = AF_UNSPEC,
 	};
-	rc = bind(s, (struct sockaddr *)&sin, 1);
+	rc = bind(s, &addr.sa.s, 1);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EINVAL);
 
 	/* UNSPEC: EAFNOSUPPORT */
 
-	sin = (struct sockaddr_in) {
+	addr_in.sa.in = (struct sockaddr_in) {
 		.sin_family = AF_UNSPEC,
 	};
-	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	rc = inet_pton(AF_INET, "127.0.0.20", &addr_in.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_int_equal(rc, -1);
 	/* FreeBSD uses EADDRNOTAVAIL here ... */
 	assert_true(errno == EAFNOSUPPORT || errno == EADDRNOTAVAIL);
 
 	/* special case: AF_UNSPEC with INADDR_ANY: success mapped to AF_INET */
 
-	sin = (struct sockaddr_in) {
+	addr_in.sa.in = (struct sockaddr_in) {
 		.sin_family = AF_UNSPEC,
 	};
-	assert_int_equal(sin.sin_addr.s_addr, htonl(INADDR_ANY));
+	assert_int_equal(addr_in.sa.in.sin_addr.s_addr, htonl(INADDR_ANY));
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_return_code(rc, errno);
 
 	close(s);
@@ -96,24 +99,24 @@ static void test_bind_ipv4(void **state)
 	 * all fail with EAFNOSUPPORT
 	 */
 
-	sa = (struct sockaddr) {
-		.sa_family = AF_UNIX,
+	addr.sa.ss = (struct sockaddr_storage) {
+		.ss_family = AF_UNIX,
 	};
-	rc = bind(s, (struct sockaddr *)&sa, salen);
+	rc = bind(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 
-	sin = (struct sockaddr_in) {
+	addr_in.sa.in = (struct sockaddr_in) {
 		.sin_family = AF_UNIX,
 	};
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 
-	addr_un = (struct sockaddr_un) {
+	addr_un.sa.un = (struct sockaddr_un) {
 		.sun_family = AF_UNIX,
 	};
-	rc = bind(s, (struct sockaddr *)&addr_un, sulen);
+	rc = bind(s, &addr_un.sa.s, addr_un.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 
@@ -122,10 +125,10 @@ static void test_bind_ipv4(void **state)
 	 * Test with family AF_INET6 - fail
 	 */
 
-	sin = (struct sockaddr_in) {
+	addr_in.sa.in = (struct sockaddr_in) {
 		.sin_family = AF_INET6,
 	};
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 #endif
@@ -133,22 +136,33 @@ static void test_bind_ipv4(void **state)
 	/*
 	 * Finally, success binding a new IPv4 address.
 	 */
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
+	addr_in = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_un),
+		.sa.in = (struct sockaddr_in) {
+			.sin_family = AF_INET,
+		},
+	};
 
-	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	rc = inet_pton(AF_INET, "127.0.0.20", &addr_in.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr_in = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_un),
+		.sa.in = (struct sockaddr_in) {
+			.sin_family = AF_INET,
+			.sin_port = htons(torture_server_port()),
+		},
+	};
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr_in.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_return_code(rc, errno);
 
 	close(s);
@@ -313,8 +327,9 @@ static void test_bind_ipv4_addr_in_use(void **state)
 #ifdef HAVE_BINDRESVPORT
 static void test_bindresvport_ipv4(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	int rc;
 	int s;
 
@@ -323,22 +338,28 @@ static void test_bindresvport_ipv4(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_return_code(s, errno);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
+	addr.sa.in.sin_family = AF_INET;
 
-	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	rc = inet_pton(AF_INET, "127.0.0.20", &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = bindresvport(s, &sin);
+	rc = bindresvport(s, &addr.sa.in);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+		.sa.in = (struct sockaddr_in) {
+			.sin_family = AF_INET,
+			.sin_port = htons(torture_server_port()),
+		},
+	};
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.in, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
 	close(s);
@@ -346,8 +367,9 @@ static void test_bindresvport_ipv4(void **state)
 
 static void test_bindresvport_ipv4_null(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	int rc;
 	int s;
 
@@ -359,13 +381,12 @@ static void test_bindresvport_ipv4_null(void **state)
 	rc = bindresvport(s, NULL);
 	assert_return_code(rc, errno);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
-	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &sin.sin_addr);
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
+	rc = inet_pton(AF_INET, torture_server_address(AF_INET), &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
 	close(s);
@@ -375,12 +396,12 @@ static void test_bindresvport_ipv4_null(void **state)
 #ifdef HAVE_IPV6
 static void test_bind_on_ipv6_sock(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
-	struct sockaddr_in6 sin6;
-	socklen_t slen6 = sizeof(struct sockaddr_in6);
-	struct sockaddr_un addr_un;
-	socklen_t sulen = sizeof(struct sockaddr_un);
+	struct torture_address addr_in = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	struct torture_address addr_un = {
+		.sa_socklen = sizeof(struct sockaddr_un),
+	};
 	int rc;
 	int s;
 
@@ -389,32 +410,36 @@ static void test_bind_on_ipv6_sock(void **state)
 	s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	assert_return_code(s, errno);
 
-	ZERO_STRUCT(addr_un);
-	addr_un.sun_family = AF_UNIX;
-	rc = bind(s, (struct sockaddr *)&addr_un, sulen);
+	addr_un.sa.un.sun_family = AF_UNIX;
+	rc = bind(s, &addr_un.sa.un, addr_un.sa_socklen);
 	assert_int_equal(rc, -1);
 	/* FreeBSD uses EINVAL here... */
 	assert_true(errno == EAFNOSUPPORT || errno == EINVAL);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	addr_in.sa.in.sin_family = AF_INET;
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EINVAL);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
+	addr_in.sa.in = (struct sockaddr_in) {
+		.sin_family = AF_INET,
+	};
 
-	rc = inet_pton(AF_INET, "127.0.0.20", &sin.sin_addr);
+	rc = inet_pton(AF_INET, "127.0.0.20", &addr_in.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = bind(s, (struct sockaddr *)&sin, slen);
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EINVAL);
 
-	ZERO_STRUCT(sin6);
-	sin6.sin6_family = AF_INET;
-	rc = bind(s, (struct sockaddr *)&sin6, slen6);
+	addr_in = (struct torture_address) {
+		.sa_socklen = sizeof(struct sockaddr_in6),
+		.sa.in = (struct sockaddr_in) {
+			.sin_family = AF_INET,
+		},
+	};
+
+	rc = bind(s, &addr_in.sa.s, addr_in.sa_socklen);
 	assert_int_equal(rc, -1);
 	assert_int_equal(errno, EAFNOSUPPORT);
 

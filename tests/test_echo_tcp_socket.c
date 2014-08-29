@@ -17,8 +17,9 @@
 
 static void test_socket_getsockname(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	int rc;
 	int s;
 
@@ -27,17 +28,17 @@ static void test_socket_getsockname(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin);
-	rc = getsockname(s, (struct sockaddr *)&sin, &slen);
+	rc = getsockname(s, &addr.sa.in, &addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_int_equal(sin.sin_family, AF_INET);
+	assert_int_equal(addr.sa.in.sin_family, AF_INET);
 }
 
 #ifdef HAVE_IPV6
 static void test_socket_getsockname6(void **state)
 {
-	struct sockaddr_in6 sin6;
-	socklen_t slen = sizeof(struct sockaddr_in6);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	int rc;
 	int s;
 
@@ -46,10 +47,9 @@ static void test_socket_getsockname6(void **state)
 	s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin6);
-	rc = getsockname(s, (struct sockaddr *)&sin6, &slen);
+	rc = getsockname(s, &addr.sa.in6, &addr.sa_socklen);
 	assert_return_code(rc, errno);
-	assert_int_equal(sin6.sin6_family, AF_INET6);
+	assert_int_equal(addr.sa.in6.sin6_family, AF_INET6);
 }
 #endif
 

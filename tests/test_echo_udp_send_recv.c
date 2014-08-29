@@ -34,8 +34,9 @@ static void teardown(void **state)
 
 static void test_send_recv_ipv4(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	ssize_t ret;
 	int rc;
 	int i;
@@ -46,16 +47,15 @@ static void test_send_recv_ipv4(void **state)
 	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
 
 	rc = inet_pton(AF_INET,
 		       torture_server_address(AF_INET),
-		       &sin.sin_addr);
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 	for (i = 0; i < 10; i++) {
@@ -85,8 +85,9 @@ static void test_send_recv_ipv4(void **state)
 #ifdef HAVE_IPV6
 static void test_send_recv_ipv6(void **state)
 {
-	struct sockaddr_in6 sin6;
-	socklen_t slen = sizeof(struct sockaddr_in6);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in6),
+	};
 	ssize_t ret;
 	int rc;
 	int i;
@@ -97,16 +98,15 @@ static void test_send_recv_ipv6(void **state)
 	s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin6);
-	sin6.sin6_family = AF_INET6;
-	sin6.sin6_port = htons(torture_server_port());
+	addr.sa.in6.sin6_family = AF_INET6;
+	addr.sa.in6.sin6_port = htons(torture_server_port());
 
 	rc = inet_pton(AF_INET6,
 		       torture_server_address(AF_INET6),
-		       &sin6.sin6_addr);
+		       &addr.sa.in6.sin6_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, (struct sockaddr *)&sin6, slen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 	for (i = 0; i < 10; i++) {

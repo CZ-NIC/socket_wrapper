@@ -36,6 +36,10 @@
 
 #include "config.h"
 
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
@@ -43,6 +47,19 @@
 
 #include <stdint.h>
 #include <string.h>
+
+struct torture_address {
+	socklen_t sa_socklen;
+	union {
+		struct sockaddr s;
+		struct sockaddr_in in;
+#ifdef HAVE_IPV6
+		struct sockaddr_in6 in6;
+#endif
+		struct sockaddr_un un;
+		struct sockaddr_storage ss;
+	} sa;
+};
 
 struct torture_state {
 	char *socket_dir;

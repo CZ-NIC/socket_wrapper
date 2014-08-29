@@ -34,8 +34,9 @@ static void teardown(void **state)
 
 static void test_sendto_recvfrom_ipv4(void **state)
 {
-	struct sockaddr_in sin;
-	socklen_t slen = sizeof(struct sockaddr_in);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
 	char send_buf[64] = {0};
 	char recv_buf[64] = {0};
 	ssize_t ret;
@@ -48,20 +49,20 @@ static void test_sendto_recvfrom_ipv4(void **state)
 	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(torture_server_port());
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
 
 	rc = inet_pton(AF_INET,
 		       torture_server_address(AF_INET),
-		       &sin.sin_addr);
+		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
 		char ip[INET_ADDRSTRLEN] = {0};
 		const char *a;
-		struct sockaddr_in srv_in;
-		socklen_t rlen = sizeof(srv_in);
+		struct torture_address srv_in = {
+			.sa_socklen = sizeof(struct sockaddr_in),
+		};
 		struct msghdr s_msg;
 		struct msghdr r_msg;
 		struct iovec s_iov;
@@ -71,8 +72,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 
 		ZERO_STRUCT(s_msg);
 
-		s_msg.msg_name = (struct sockaddr *)(void *)&sin;
-		s_msg.msg_namelen = slen;
+		s_msg.msg_name = &addr.sa.s;
+		s_msg.msg_namelen = addr.sa_socklen;
 
 		s_iov.iov_base = send_buf;
 		s_iov.iov_len = sizeof(send_buf);
@@ -85,8 +86,8 @@ static void test_sendto_recvfrom_ipv4(void **state)
 
 		ZERO_STRUCT(r_msg);
 
-		r_msg.msg_name = (struct sockaddr *)(void *)&srv_in;
-		r_msg.msg_namelen = rlen;
+		r_msg.msg_name = &srv_in.sa.s;
+		r_msg.msg_namelen = srv_in.sa_socklen;
 
 		r_iov.iov_base = recv_buf;
 		r_iov.iov_len = sizeof(recv_buf);
@@ -97,7 +98,7 @@ static void test_sendto_recvfrom_ipv4(void **state)
 		ret = recvmsg(s, &r_msg, 0);
 		assert_int_not_equal(ret, -1);
 
-		a = inet_ntop(AF_INET, &srv_in.sin_addr, ip, sizeof(ip));
+		a = inet_ntop(AF_INET, &srv_in.sa.in.sin_addr, ip, sizeof(ip));
 		assert_non_null(a);
 		assert_string_equal(a, torture_server_address(AF_INET));
 
@@ -110,8 +111,9 @@ static void test_sendto_recvfrom_ipv4(void **state)
 #ifdef HAVE_IPV6
 static void test_sendto_recvfrom_ipv6(void **state)
 {
-	struct sockaddr_in6 sin6;
-	socklen_t slen = sizeof(struct sockaddr_in6);
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in6),
+	};
 	char send_buf[64] = {0};
 	char recv_buf[64] = {0};
 	ssize_t ret;
@@ -124,20 +126,20 @@ static void test_sendto_recvfrom_ipv6(void **state)
 	s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	assert_int_not_equal(s, -1);
 
-	ZERO_STRUCT(sin6);
-	sin6.sin6_family = AF_INET6;
-	sin6.sin6_port = htons(torture_server_port());
+	addr.sa.in6.sin6_family = AF_INET6;
+	addr.sa.in6.sin6_port = htons(torture_server_port());
 
 	rc = inet_pton(AF_INET6,
 		       torture_server_address(AF_INET6),
-		       &sin6.sin6_addr);
+		       &addr.sa.in6.sin6_addr);
 	assert_int_equal(rc, 1);
 
 	for (i = 0; i < 10; i++) {
 		char ip[INET6_ADDRSTRLEN] = {0};
 		const char *a;
-		struct sockaddr_in6 srv_in6;
-		socklen_t rlen = sizeof(srv_in6);
+		struct torture_address srv_in6 = {
+			.sa_socklen = sizeof(struct sockaddr_in6),
+		};
 		struct msghdr s_msg;
 		struct msghdr r_msg;
 		struct iovec s_iov;
@@ -147,8 +149,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 
 		ZERO_STRUCT(s_msg);
 
-		s_msg.msg_name = (struct sockaddr *)(void *)&sin6;
-		s_msg.msg_namelen = slen;
+		s_msg.msg_name = &addr.sa.s;
+		s_msg.msg_namelen = addr.sa_socklen;
 
 		s_iov.iov_base = send_buf;
 		s_iov.iov_len = sizeof(send_buf);
@@ -160,8 +162,8 @@ static void test_sendto_recvfrom_ipv6(void **state)
 		assert_int_not_equal(ret, -1);
 
 		ZERO_STRUCT(r_msg);
-		r_msg.msg_name = (struct sockaddr *)(void *)&srv_in6;
-		r_msg.msg_namelen = rlen;
+		r_msg.msg_name = &srv_in6.sa.s;
+		r_msg.msg_namelen = srv_in6.sa_socklen;
 
 		r_iov.iov_base = recv_buf;
 		r_iov.iov_len = sizeof(recv_buf);
@@ -172,7 +174,7 @@ static void test_sendto_recvfrom_ipv6(void **state)
 		ret = recvmsg(s, &r_msg, 0);
 		assert_int_not_equal(ret, -1);
 
-		a = inet_ntop(AF_INET6, &srv_in6.sin6_addr, ip, sizeof(ip));
+		a = inet_ntop(AF_INET6, &srv_in6.sa.in6.sin6_addr, ip, sizeof(ip));
 		assert_non_null(a);
 		assert_string_equal(a, torture_server_address(AF_INET6));
 
