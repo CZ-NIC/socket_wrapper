@@ -612,7 +612,8 @@ static ssize_t echo_udp_recv_from_to(int sock,
 			if (cmsgptr->cmsg_level == IPPROTO_IP &&
 			    cmsgptr->cmsg_type == IP_RECVDSTADDR) {
 				char ip[INET_ADDRSTRLEN] = { 0 };
-				struct sockaddr_in *sinp = (struct sockaddr_in *)to;
+				struct sockaddr_in *sinp =
+					(struct sockaddr_in *)(void *)to;
 				struct in_addr *addr;
 				void *cmsg_cast_ptr = CMSG_DATA(cmsgptr);
 
@@ -639,7 +640,8 @@ static ssize_t echo_udp_recv_from_to(int sock,
 					cmsgptr->cmsg_type == IPV6_PKTINFO) {
 				char ip[INET6_ADDRSTRLEN] = { 0 };
 				struct in6_pktinfo *pkt6;
-				struct sockaddr_in6 *sin6p = (struct sockaddr_in6 *)to;
+				struct sockaddr_in6 *sin6p =
+					(struct sockaddr_in6 *)(void *)to;
 				void *cmsg_cast_ptr = CMSG_DATA(cmsgptr);
 
 				pkt6 = (struct in6_pktinfo *)cmsg_cast_ptr;
@@ -717,7 +719,8 @@ static ssize_t echo_udp_send_to_from(int sock,
 #elif defined(IP_SENDSRCADDR)
 		struct in_addr *p = (struct in_addr *)cmsg_cast_ptr;
 #endif
-		const struct sockaddr_in *from4 = (const struct sockaddr_in *)from;
+		const struct sockaddr_in *from4 =
+			(const struct sockaddr_in *)(const void *)from;
 
 		if (fromlen != sizeof(struct sockaddr_in)) {
 			break;
@@ -742,7 +745,8 @@ static ssize_t echo_udp_send_to_from(int sock,
 	case AF_INET6: {
         void *cast_ptr = CMSG_DATA(cmsgptr);
 		struct in6_pktinfo *p = (struct in6_pktinfo *)cast_ptr;
-		const struct sockaddr_in6 *from6 = (const struct sockaddr_in6 *)from;
+		const struct sockaddr_in6 *from6 =
+			(const struct sockaddr_in6 *)(const void *)from;
 
 		if (fromlen != sizeof(struct sockaddr_in6)) {
 			break;
