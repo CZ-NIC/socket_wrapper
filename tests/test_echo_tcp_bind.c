@@ -411,7 +411,7 @@ static void test_bind_on_ipv6_sock(void **state)
 	assert_return_code(s, errno);
 
 	addr_un.sa.un.sun_family = AF_UNIX;
-	rc = bind(s, &addr_un.sa.un, addr_un.sa_socklen);
+	rc = bind(s, &addr_un.sa.s, addr_un.sa_socklen);
 	assert_int_equal(rc, -1);
 	/* FreeBSD uses EINVAL here... */
 	assert_true(errno == EAFNOSUPPORT || errno == EINVAL);

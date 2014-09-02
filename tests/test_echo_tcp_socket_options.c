@@ -122,7 +122,7 @@ static void test_sockopt_so(void **state)
 		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, &addr.sa.in, addr.sa_socklen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 #ifdef SO_DOMAIN
@@ -192,7 +192,7 @@ static void test_sockopt_so6(void **state)
 		       &addr.sa.in6.sin6_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, &addr.sa.in6, addr.sa_socklen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 #ifdef SO_DOMAIN
