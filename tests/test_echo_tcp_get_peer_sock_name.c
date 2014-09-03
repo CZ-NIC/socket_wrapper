@@ -59,8 +59,10 @@ static void _assert_sockaddr_port_equal(struct torture_address *addr,
 	switch(addr->sa.ss.ss_family) {
 	case AF_INET:
 		n_port = addr->sa.in.sin_port;
+		break;
 	case AF_INET6:
 		n_port = addr->sa.in6.sin6_port;
+		break;
 	default:
 		return;
 	}
@@ -83,8 +85,10 @@ static void _assert_sockaddr_port_range_equal(struct torture_address *addr,
 	switch(addr->sa.ss.ss_family) {
 	case AF_INET:
 		n_port = addr->sa.in.sin_port;
+		break;
 	case AF_INET6:
 		n_port = addr->sa.in6.sin6_port;
+		break;
 	default:
 		return;
 	}
