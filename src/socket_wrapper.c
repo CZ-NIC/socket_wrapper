@@ -2727,7 +2727,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 
 	for (i = 0; i < SOCKET_MAX_SOCKETS; i++) {
 		port = autobind_start + i;
-		snprintf(un_addr.sa.un.sun_path, un_addr.sa_socklen,
+		snprintf(un_addr.sa.un.sun_path, sizeof(un_addr.sa.un.sun_path),
 			 "%s/"SOCKET_FORMAT, socket_wrapper_dir(),
 			 type, socket_wrapper_default_iface(), port);
 		if (stat(un_addr.sa.un.sun_path, &st) == 0) continue;
