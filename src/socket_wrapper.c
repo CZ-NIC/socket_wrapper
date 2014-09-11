@@ -272,10 +272,12 @@ void swrap_destructor(void) DESTRUCTOR_ATTRIBUTE;
 # define SWRAP_LOG(...)
 #else
 
-static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
-# define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __VA_ARGS__)
+static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *func, const char *format, ...) PRINTF_ATTRIBUTE(3, 4);
+# define SWRAP_LOG(dbglvl, ...) swrap_log((dbglvl), __func__, __VA_ARGS__)
 
-static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
+static void swrap_log(enum swrap_dbglvl_e dbglvl,
+		      const char *func,
+		      const char *format, ...)
 {
 	char buffer[1024];
 	va_list va;
@@ -295,23 +297,23 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl, const char *format, ...)
 		switch (dbglvl) {
 			case SWRAP_LOG_ERROR:
 				fprintf(stderr,
-					"SWRAP_ERROR(%d): %s\n",
-					(int)getpid(), buffer);
+					"SWRAP_ERROR(%d) - %s: %s\n",
+					(int)getpid(), func, buffer);
 				break;
 			case SWRAP_LOG_WARN:
 				fprintf(stderr,
-					"SWRAP_WARN(%d): %s\n",
-					(int)getpid(), buffer);
+					"SWRAP_WARN(%d) - %s: %s\n",
+					(int)getpid(), func, buffer);
 				break;
 			case SWRAP_LOG_DEBUG:
 				fprintf(stderr,
-					"SWRAP_DEBUG(%d): %s\n",
-					(int)getpid(), buffer);
+					"SWRAP_DEBUG(%d) - %s: %s\n",
+					(int)getpid(), func, buffer);
 				break;
 			case SWRAP_LOG_TRACE:
 				fprintf(stderr,
-					"SWRAP_TRACE(%d): %s\n",
-					(int)getpid(), buffer);
+					"SWRAP_TRACE(%d) - %s: %s\n",
+					(int)getpid(), func, buffer);
 				break;
 		}
 	}
