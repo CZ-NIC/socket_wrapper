@@ -1,6 +1,10 @@
 ChangeLog
 ==========
 
+version 1.1.2 (released 2014-10-01)
+  * Added support for fnctl(F_DUPFD).
+  * Added support for glibc 2.20.90.
+
 version 1.1.1 (released 2014-06-05)
   * Disable incomplete address in use check in bind().
 
