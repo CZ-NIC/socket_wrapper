@@ -119,6 +119,14 @@ check_prototype_definition(ioctl
     "unistd.h;sys/ioctl.h"
     HAVE_IOCTL_INT)
 
+if (HAVE_EVENTFD)
+    check_prototype_definition(eventfd
+        "int eventfd(unsigned int count, int flags)"
+        "-1"
+        "sys/eventfd.h"
+        HAVE_EVENTFD_UNSIGNED_INT)
+endif (HAVE_EVENTFD)
+
 # IPV6
 check_c_source_compiles("
     #include <stdlib.h>

@@ -42,6 +42,7 @@
 
 #cmakedefine HAVE_ACCEPT_PSOCKLEN_T 1
 #cmakedefine HAVE_IOCTL_INT 1
+#cmakedefine HAVE_EVENTFD_UNSIGNED_INT 1
 
 /*************************** LIBRARIES ***************************/
 
