@@ -48,6 +48,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdbool.h>
 
 #define TORTURE_ECHO_SRV_IPV4 "127.0.0.10"
 /* socket wrapper IPv6 prefix  fd00::5357:5fxx */
@@ -259,6 +260,8 @@ void torture_teardown_echo_srv(void **state)
 	ssize_t rc;
 	pid_t pid;
 	int fd;
+	bool is_running = true;
+	int count;
 
 	/* read the pidfile */
 	fd = open(s->srv_pidfile, O_RDONLY);
@@ -281,11 +284,20 @@ void torture_teardown_echo_srv(void **state)
 
 	pid = (pid_t)(tmp & 0xFFFF);
 
-	/* Make sure the daemon goes away! */
-	kill(pid, SIGTERM);
+	for (count = 0; count < 10; count++) {
+		/* Make sure the daemon goes away! */
+		kill(pid, SIGTERM);
 
-	kill(pid, 0);
-	if (rc == 0) {
+		usleep(200);
+
+		rc = kill(pid, 0);
+		if (rc != 0) {
+			is_running = false;
+			break;
+		}
+	}
+
+	if (is_running) {
 		fprintf(stderr,
 			"WARNING the echo server is still running!\n");
 	}
