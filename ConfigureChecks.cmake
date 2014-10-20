@@ -194,6 +194,17 @@ int main(void) {
     return 0;
 }" HAVE_FUNCTION_ATTRIBUTE_FORMAT)
 
+check_c_source_compiles("
+void test_address_sanitizer_attribute(void) __attribute__((no_sanitize_address));
+
+void test_address_sanitizer_attribute(void)
+{
+    return;
+}
+
+int main(void) {
+    return 0;
+}" HAVE_ADDRESS_SANITIZER_ATTRIBUTE)
 
 check_library_exists(dl dlopen "" HAVE_LIBDL)
 if (HAVE_LIBDL)
