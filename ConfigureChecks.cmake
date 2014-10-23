@@ -194,6 +194,8 @@ int main(void) {
     return 0;
 }" HAVE_FUNCTION_ATTRIBUTE_FORMAT)
 
+# If this produces a warning treat it as error!
+set(CMAKE_REQUIRED_FLAGS "-Werror")
 check_c_source_compiles("
 void test_address_sanitizer_attribute(void) __attribute__((no_sanitize_address));
 
@@ -205,6 +207,7 @@ void test_address_sanitizer_attribute(void)
 int main(void) {
     return 0;
 }" HAVE_ADDRESS_SANITIZER_ATTRIBUTE)
+set(CMAKE_REQUIRED_FLAGS)
 
 check_library_exists(dl dlopen "" HAVE_LIBDL)
 if (HAVE_LIBDL)
