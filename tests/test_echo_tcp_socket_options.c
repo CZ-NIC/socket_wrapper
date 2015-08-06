@@ -20,26 +20,34 @@
 #define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
 #endif
 
-static void setup_echo_srv_tcp_ipv4(void **state)
+static int setup_echo_srv_tcp_ipv4(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv4(state);
+
+	return 0;
 }
 
 #ifdef HAVE_IPV6
-static void setup_echo_srv_tcp_ipv6(void **state)
+static int setup_echo_srv_tcp_ipv6(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv6(state);
+
+	return 0;
 }
 
-static void setup_ipv6(void **state)
+static int setup_ipv6(void **state)
 {
 	torture_setup_socket_dir(state);
+
+	return 0;
 }
 #endif
 
-static void teardown(void **state)
+static int teardown(void **state)
 {
 	torture_teardown_echo_srv(state);
+
+	return 0;
 }
 
 static void test_sockopt_sndbuf(void **state)
@@ -288,20 +296,24 @@ static void test_bind_ipv6_only(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test_setup_teardown(test_sockopt_sndbuf, setup_echo_srv_tcp_ipv4, teardown),
-		unit_test_setup_teardown(test_sockopt_so,
-					 setup_echo_srv_tcp_ipv4,
-					 teardown),
+	const struct CMUnitTest sockopt_tests[] = {
+		cmocka_unit_test_setup_teardown(test_sockopt_sndbuf,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_sockopt_so,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
 #ifdef HAVE_IPV6
-		unit_test_setup_teardown(test_sockopt_so6,
-					 setup_echo_srv_tcp_ipv6,
-					 teardown),
-		unit_test_setup_teardown(test_bind_ipv6_only, setup_ipv6, teardown),
+		cmocka_unit_test_setup_teardown(test_sockopt_so6,
+						setup_echo_srv_tcp_ipv6,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_bind_ipv6_only,
+						setup_ipv6,
+						teardown),
 #endif
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(sockopt_tests, NULL, NULL);
 
 	return rc;
 }

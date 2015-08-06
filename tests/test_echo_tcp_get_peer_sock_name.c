@@ -15,15 +15,19 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static void setup_echo_srv_tcp_ipv4(void **state)
+static int setup_echo_srv_tcp_ipv4(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv4(state);
 	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "20", 1);
+
+	return 0;
 }
 
-static void teardown(void **state)
+static int teardown(void **state)
 {
 	torture_teardown_echo_srv(state);
+
+	return 0;
 }
 
 static void _assert_sockaddr_equal(struct torture_address *addr, const char *a,
@@ -446,25 +450,27 @@ static void test_connect_getsockname_getpeername_len(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test_setup_teardown(test_connect_getsockname_getpeername,
-					 setup_echo_srv_tcp_ipv4,
-					 teardown),
-		unit_test_setup_teardown(test_connect_getsockname_getpeername_port,
-					 setup_echo_srv_tcp_ipv4,
-					 teardown),
-		unit_test_setup_teardown(test_connect_getsockname_getpeername_any,
-					 setup_echo_srv_tcp_ipv4,
-					 teardown),
-		unit_test_setup_teardown(test_connect_getsockname_getpeername_any_port,
-					 setup_echo_srv_tcp_ipv4,
-					 teardown),
-		unit_test_setup_teardown(test_connect_getsockname_getpeername_len,
-					 setup_echo_srv_tcp_ipv4,
-					 teardown),
+	const struct CMUnitTest sock_name_tests[] = {
+		cmocka_unit_test_setup_teardown(test_connect_getsockname_getpeername,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_connect_getsockname_getpeername_port,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_connect_getsockname_getpeername_any,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_connect_getsockname_getpeername_any_port,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_connect_getsockname_getpeername_len,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(sock_name_tests,
+				    NULL,
+				    NULL);
 
 	return rc;
 }

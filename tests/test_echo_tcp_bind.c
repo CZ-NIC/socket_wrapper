@@ -19,19 +19,25 @@
 #include <rpc/rpc.h>
 #endif
 
-static void setup_echo_srv_tcp_ipv4(void **state)
+static int setup_echo_srv_tcp_ipv4(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv4(state);
+
+	return 0;
 }
 
-static void setup_echo_srv_tcp_ipv6(void **state)
+static int setup_echo_srv_tcp_ipv6(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv6(state);
+
+	return 0;
 }
 
-static void teardown(void **state)
+static int teardown(void **state)
 {
 	torture_teardown_echo_srv(state);
+
+	return 0;
 }
 
 static void test_bind_ipv4(void **state)
@@ -492,39 +498,39 @@ static void test_bindresvport_on_ipv6_sock_null(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test_setup_teardown(test_bind_ipv4,
+	const struct CMUnitTest tcp_bind_tests[] = {
+		cmocka_unit_test_setup_teardown(test_bind_ipv4,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
 #if 0 /* TODO */
-		unit_test_setup_teardown(test_bind_ipv4_addr_in_use,
+		cmocka_unit_test_setup_teardown(test_bind_ipv4_addr_in_use,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
 #endif
 #ifdef HAVE_BINDRESVPORT
-		unit_test_setup_teardown(test_bindresvport_ipv4,
+		cmocka_unit_test_setup_teardown(test_bindresvport_ipv4,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
-		unit_test_setup_teardown(test_bindresvport_ipv4_null,
+		cmocka_unit_test_setup_teardown(test_bindresvport_ipv4_null,
 					 setup_echo_srv_tcp_ipv4,
 					 teardown),
 #endif /* HAVE_BINDRESVPORT */
 #ifdef HAVE_IPV6
-		unit_test_setup_teardown(test_bind_on_ipv6_sock,
+		cmocka_unit_test_setup_teardown(test_bind_on_ipv6_sock,
 					 setup_echo_srv_tcp_ipv6,
 					 teardown),
 #ifdef HAVE_BINDRESVPORT
-		unit_test_setup_teardown(test_bindresvport_on_ipv6_sock,
+		cmocka_unit_test_setup_teardown(test_bindresvport_on_ipv6_sock,
 					 setup_echo_srv_tcp_ipv6,
 					 teardown),
-		unit_test_setup_teardown(test_bindresvport_on_ipv6_sock_null,
+		cmocka_unit_test_setup_teardown(test_bindresvport_on_ipv6_sock_null,
 					 setup_echo_srv_tcp_ipv6,
 					 teardown),
 #endif /* HAVE_BINDRESVPORT */
 #endif /* HAVE_IPV6 */
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(tcp_bind_tests, NULL, NULL);
 
 	return rc;
 }

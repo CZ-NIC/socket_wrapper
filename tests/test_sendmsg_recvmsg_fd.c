@@ -106,11 +106,11 @@ static void test_sendmsg_recvmsg_fd(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test(test_sendmsg_recvmsg_fd),
+	const struct CMUnitTest tests[] = {
+		cmocka_unit_test(test_sendmsg_recvmsg_fd),
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(tests, NULL, NULL);
 
 	return rc;
 }

@@ -56,14 +56,14 @@ static void test_socket_getsockname6(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test(test_socket_getsockname),
+	const struct CMUnitTest getsockname_tests[] = {
+		cmocka_unit_test(test_socket_getsockname),
 #ifdef HAVE_IPV6
-		unit_test(test_socket_getsockname6),
+		cmocka_unit_test(test_socket_getsockname6),
 #endif
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(getsockname_tests, NULL, NULL);
 
 	return rc;
 }

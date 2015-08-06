@@ -15,14 +15,18 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static void setup_echo_srv_tcp_ipv4(void **state)
+static int setup_echo_srv_tcp_ipv4(void **state)
 {
 	torture_setup_echo_srv_tcp_ipv4(state);
+
+	return 0;
 }
 
-static void teardown(void **state)
+static int teardown(void **state)
 {
 	torture_teardown_echo_srv(state);
+
+	return 0;
 }
 
 static void test_connect_broadcast_ipv4(void **state)
@@ -82,14 +86,16 @@ static void test_connect_downgrade_ipv6(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test_setup_teardown(test_connect_broadcast_ipv4, setup_echo_srv_tcp_ipv4, teardown),
+	const struct CMUnitTest tcp_connect_tests[] = {
+		cmocka_unit_test(test_connect_broadcast_ipv4),
 #ifdef HAVE_IPV6
-		unit_test_setup_teardown(test_connect_downgrade_ipv6, setup_echo_srv_tcp_ipv4, teardown),
+		cmocka_unit_test(test_connect_downgrade_ipv6),
 #endif
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(tcp_connect_tests,
+				    setup_echo_srv_tcp_ipv4,
+				    teardown);
 
 	return rc;
 }

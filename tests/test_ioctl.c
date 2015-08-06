@@ -14,7 +14,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-static void setup(void **state)
+static int setup(void **state)
 {
 	char test_tmpdir[256];
 	const char *p;
@@ -29,16 +29,18 @@ static void setup(void **state)
 	*state = strdup(p);
 	setenv("SOCKET_WRAPPER_DIR", p, 1);
 	setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "11", 1);
+
+	return 0;
 }
 
-static void teardown(void **state)
+static int teardown(void **state)
 {
 	char remove_cmd[PATH_MAX] = {0};
 	char *s = (char *)*state;
 	int rc;
 
 	if (s == NULL) {
-		return;
+		return -1;
 	}
 
 	snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", s);
@@ -48,6 +50,8 @@ static void teardown(void **state)
 	if (rc < 0) {
 		fprintf(stderr, "%s failed: %s", remove_cmd, strerror(errno));
 	}
+
+	return rc;
 }
 
 static void test_swrap_socket(void **state)
@@ -95,12 +99,12 @@ static void test_swrap_ioctl_sock(void **state)
 int main(void) {
 	int rc;
 
-	const UnitTest tests[] = {
-		unit_test_setup_teardown(test_swrap_socket, setup, teardown),
-		unit_test_setup_teardown(test_swrap_ioctl_sock, setup, teardown),
+	const struct CMUnitTest ioctl_tests[] = {
+		cmocka_unit_test_setup_teardown(test_swrap_socket, setup, teardown),
+		cmocka_unit_test_setup_teardown(test_swrap_ioctl_sock, setup, teardown),
 	};
 
-	rc = run_tests(tests);
+	rc = cmocka_run_group_tests(ioctl_tests, NULL, NULL);
 
 	return rc;
 }
