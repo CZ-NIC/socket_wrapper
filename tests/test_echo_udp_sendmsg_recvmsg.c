@@ -104,6 +104,8 @@ static void test_sendmsg_recvmsg_ipv4(void **state)
 		ret = recvmsg(s, &r_msg, 0);
 		assert_int_not_equal(ret, -1);
 
+		assert_int_equal(r_msg.msg_namelen, sizeof(struct sockaddr_in));
+
 		a = inet_ntop(AF_INET, &srv_in.sa.in.sin_addr, ip, sizeof(ip));
 		assert_non_null(a);
 		assert_string_equal(a, torture_server_address(AF_INET));
@@ -180,6 +182,8 @@ static void test_sendmsg_recvmsg_ipv6(void **state)
 		ret = recvmsg(s, &r_msg, 0);
 		assert_int_not_equal(ret, -1);
 
+		assert_int_equal(r_msg.msg_namelen, sizeof(struct sockaddr_in6));
+
 		a = inet_ntop(AF_INET6, &srv_in6.sa.in6.sin6_addr, ip, sizeof(ip));
 		assert_non_null(a);
 		assert_string_equal(a, torture_server_address(AF_INET6));
@@ -190,6 +194,189 @@ static void test_sendmsg_recvmsg_ipv6(void **state)
 	close(s);
 }
 #endif
+
+static void test_sendmsg_recvmsg_ipv4_connected(void **state)
+{
+	struct torture_address s_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct torture_address r_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct msghdr s_msg = {
+		.msg_namelen = 0,
+	};
+	struct msghdr r_msg = {
+		.msg_namelen = 0,
+	};
+	struct iovec iov;
+	char ip[INET_ADDRSTRLEN] = {0};
+	char payload[] = "PACKET";
+	const char *a;
+	ssize_t ret;
+	int rc;
+	int s;
+
+	(void)state; /* unused */
+
+	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	assert_int_not_equal(s, -1);
+
+	s_addr.sa.in.sin_family = AF_INET;
+	s_addr.sa.in.sin_port = htons(torture_server_port());
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &s_addr.sa.in.sin_addr);
+	assert_int_equal(rc, 1);
+
+	rc = connect(s, &s_addr.sa.s, s_addr.sa_socklen);
+
+	iov.iov_base = (void *)payload;
+	iov.iov_len = sizeof(payload);
+
+	/* msg_name is NULL */
+
+	s_msg.msg_iov = &iov;
+	s_msg.msg_iovlen = 1;
+
+	ret = sendmsg(s, &s_msg, 0);
+	assert_int_not_equal(ret, -1);
+
+	r_msg.msg_name = &r_addr.sa.ss;
+	r_msg.msg_namelen = r_addr.sa_socklen;
+
+	memset(payload, '0', sizeof(payload));
+
+	r_msg.msg_iov = &iov;
+	r_msg.msg_iovlen = 1;
+
+	ret = recvmsg(s, &r_msg, 0);
+	assert_int_not_equal(ret, -1);
+
+	assert_int_equal(r_msg.msg_namelen, sizeof(struct sockaddr_in));
+
+	a = inet_ntop(AF_INET, &r_addr.sa.in.sin_addr, ip, sizeof(ip));
+	assert_non_null(a);
+	assert_string_equal(a, torture_server_address(AF_INET));
+
+	close(s);
+}
+
+static void test_sendmsg_recvmsg_ipv4_connected_null(void **state)
+{
+	struct torture_address s_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct msghdr s_msg = {
+		.msg_namelen = 0,
+	};
+	struct msghdr r_msg = {
+		.msg_namelen = 0,
+	};
+	struct iovec iov;
+	char payload[] = "PACKET";
+	ssize_t ret;
+	int rc;
+	int s;
+
+	(void)state; /* unused */
+
+	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	assert_int_not_equal(s, -1);
+
+	s_addr.sa.in.sin_family = AF_INET;
+	s_addr.sa.in.sin_port = htons(torture_server_port());
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &s_addr.sa.in.sin_addr);
+	assert_int_equal(rc, 1);
+
+	rc = connect(s, &s_addr.sa.s, s_addr.sa_socklen);
+
+	/* msg_name = NULL */
+
+	iov.iov_base = (void *)payload;
+	iov.iov_len = sizeof(payload);
+
+	s_msg.msg_iov = &iov;
+	s_msg.msg_iovlen = 1;
+
+	ret = sendmsg(s, &s_msg, 0);
+	assert_int_not_equal(ret, -1);
+
+	/* msg_name = NULL */
+
+	memset(payload, '0', sizeof(payload));
+
+	r_msg.msg_iov = &iov;
+	r_msg.msg_iovlen = 1;
+
+	ret = recvmsg(s, &r_msg, 0);
+	assert_int_not_equal(ret, -1);
+
+	assert_int_equal(r_msg.msg_namelen, 0);
+	assert_null(r_msg.msg_name);
+
+	close(s);
+}
+
+static void test_sendmsg_recvmsg_ipv4_connected_namelen(void **state)
+{
+	struct torture_address s_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
+	struct msghdr s_msg = {
+		.msg_namelen = 0,
+	};
+	struct msghdr r_msg = {
+		.msg_namelen = sizeof(struct sockaddr_storage),
+	};
+	struct iovec iov;
+	char payload[] = "PACKET";
+	ssize_t ret;
+	int rc;
+	int s;
+
+	(void)state; /* unused */
+
+	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	assert_int_not_equal(s, -1);
+
+	s_addr.sa.in.sin_family = AF_INET;
+	s_addr.sa.in.sin_port = htons(torture_server_port());
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &s_addr.sa.in.sin_addr);
+	assert_int_equal(rc, 1);
+
+	rc = connect(s, &s_addr.sa.s, s_addr.sa_socklen);
+
+	/* msg_name = NULL */
+
+	iov.iov_base = (void *)payload;
+	iov.iov_len = sizeof(payload);
+
+	s_msg.msg_iov = &iov;
+	s_msg.msg_iovlen = 1;
+
+	ret = sendmsg(s, &s_msg, 0);
+	assert_int_not_equal(ret, -1);
+
+	/* msg_name = NULL */
+
+	memset(payload, '0', sizeof(payload));
+
+	r_msg.msg_iov = &iov;
+	r_msg.msg_iovlen = 1;
+
+	ret = recvmsg(s, &r_msg, 0);
+	assert_int_not_equal(ret, -1);
+
+	close(s);
+}
 
 int main(void) {
 	int rc;
@@ -203,6 +390,15 @@ int main(void) {
 						setup_echo_srv_udp_ipv6,
 						teardown),
 #endif
+		cmocka_unit_test_setup_teardown(test_sendmsg_recvmsg_ipv4_connected,
+						setup_echo_srv_udp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_sendmsg_recvmsg_ipv4_connected_null,
+						setup_echo_srv_udp_ipv4,
+						teardown),
+		cmocka_unit_test_setup_teardown(test_sendmsg_recvmsg_ipv4_connected_namelen,
+						setup_echo_srv_udp_ipv4,
+						teardown),
 	};
 
 	rc = cmocka_run_group_tests(sendmsg_tests, NULL, NULL);
