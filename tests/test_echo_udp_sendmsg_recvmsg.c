@@ -38,7 +38,7 @@ static int teardown(void **state)
 	return 0;
 }
 
-static void test_sendto_recvfrom_ipv4(void **state)
+static void test_sendmsg_recvmsg_ipv4(void **state)
 {
 	struct torture_address addr = {
 		.sa_socklen = sizeof(struct sockaddr_in),
@@ -115,7 +115,7 @@ static void test_sendto_recvfrom_ipv4(void **state)
 }
 
 #ifdef HAVE_IPV6
-static void test_sendto_recvfrom_ipv6(void **state)
+static void test_sendmsg_recvmsg_ipv6(void **state)
 {
 	struct torture_address addr = {
 		.sa_socklen = sizeof(struct sockaddr_in6),
@@ -195,11 +195,11 @@ int main(void) {
 	int rc;
 
 	const struct CMUnitTest sendmsg_tests[] = {
-		cmocka_unit_test_setup_teardown(test_sendto_recvfrom_ipv4,
+		cmocka_unit_test_setup_teardown(test_sendmsg_recvmsg_ipv4,
 						setup_echo_srv_udp_ipv4,
 						teardown),
 #ifdef HAVE_IPV6
-		cmocka_unit_test_setup_teardown(test_sendto_recvfrom_ipv6,
+		cmocka_unit_test_setup_teardown(test_sendmsg_recvmsg_ipv6,
 						setup_echo_srv_udp_ipv6,
 						teardown),
 #endif
