@@ -1,6 +1,6 @@
 socket_wrapper(1)
 =================
-:revdate: 2014-07-09
+:revdate: 2015-08-11
 
 NAME
 ----
@@ -51,6 +51,13 @@ between the client and server within your application. If you define
 SOCKET_WRAPPER_PCAP_FILE=/path/to/file.pcap, socket_wrapper will dump all your
 network traffic to the specified file. After the test has been finished you're
 able to open the file for example with Wireshark.
+
+*SOCKET_WRAPPER_MTU*::
+
+With this variable you can change the MTU size. However we do not recomment to
+do that as the default size of 1500 byte is best for formatting PCAP files.
+
+The minimum value you can set is 512 and the maximum 32768.
 
 *SOCKET_WRAPPER_DEBUGLEVEL*::
 
