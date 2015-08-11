@@ -24,6 +24,7 @@ set(SWRAP_TESTS
     test_echo_tcp_connect
     test_echo_tcp_bind
     test_echo_tcp_socket_options
+    test_echo_tcp_sendmsg_recvmsg
     test_echo_tcp_write_read
     test_echo_tcp_writev_readv
     test_echo_tcp_get_peer_sock_name
