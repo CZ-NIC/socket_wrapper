@@ -28,7 +28,7 @@ static void test_socket_getsockname(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	rc = getsockname(s, &addr.sa.in, &addr.sa_socklen);
+	rc = getsockname(s, &addr.sa.s, &addr.sa_socklen);
 	assert_return_code(rc, errno);
 	assert_int_equal(addr.sa.in.sin_family, AF_INET);
 }

@@ -76,7 +76,7 @@ static void test_connect_downgrade_ipv6(void **state)
 	assert_int_equal(rc, 1);
 
 	/* Connect should downgrade to IPv4 and allow the connect */
-	rc = connect(s, &addr.sa.in, addr.sa_socklen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_int_equal(rc, 0);
 
 	close(s);

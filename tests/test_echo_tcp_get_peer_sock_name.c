@@ -413,7 +413,7 @@ static void test_connect_getsockname_getpeername_len(void **state)
 	assert_int_equal(rc, 1);
 
 	/* Connect */
-	rc = connect(s, &addr.sa.in, addr.sa_socklen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
 	/* Check with len=0 */
