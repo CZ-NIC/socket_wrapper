@@ -236,7 +236,7 @@ static void test_sendmsg_recvmsg_ipv4_null(void **state)
 
 	/* msg_name = NULL */
 
-	memset(payload, '0', sizeof(payload));
+	memset(payload, 0, sizeof(payload));
 
 	r_msg.msg_iov = &iov;
 	r_msg.msg_iovlen = 1;

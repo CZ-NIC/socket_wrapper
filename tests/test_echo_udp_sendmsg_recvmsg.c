@@ -246,7 +246,7 @@ static void test_sendmsg_recvmsg_ipv4_connected(void **state)
 	r_msg.msg_name = &r_addr.sa.ss;
 	r_msg.msg_namelen = r_addr.sa_socklen;
 
-	memset(payload, '0', sizeof(payload));
+	memset(payload, 0, sizeof(payload));
 
 	r_msg.msg_iov = &iov;
 	r_msg.msg_iovlen = 1;
@@ -308,7 +308,7 @@ static void test_sendmsg_recvmsg_ipv4_connected_null(void **state)
 
 	/* msg_name = NULL */
 
-	memset(payload, '0', sizeof(payload));
+	memset(payload, 0, sizeof(payload));
 
 	r_msg.msg_iov = &iov;
 	r_msg.msg_iovlen = 1;
@@ -367,7 +367,7 @@ static void test_sendmsg_recvmsg_ipv4_connected_namelen(void **state)
 
 	/* msg_name = NULL */
 
-	memset(payload, '0', sizeof(payload));
+	memset(payload, 0, sizeof(payload));
 
 	r_msg.msg_iov = &iov;
 	r_msg.msg_iovlen = 1;
