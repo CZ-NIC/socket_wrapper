@@ -193,7 +193,7 @@ static void test_sendmsg_recvmsg_ipv6(void **state)
 
 static void test_sendmsg_recvmsg_ipv4_null(void **state)
 {
-	struct torture_address s_addr = {
+	struct torture_address send_addr = {
 		.sa_socklen = sizeof(struct sockaddr_storage),
 	};
 	struct msghdr s_msg = {
@@ -213,15 +213,15 @@ static void test_sendmsg_recvmsg_ipv4_null(void **state)
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	assert_int_not_equal(s, -1);
 
-	s_addr.sa.in.sin_family = AF_INET;
-	s_addr.sa.in.sin_port = htons(torture_server_port());
+	send_addr.sa.in.sin_family = AF_INET;
+	send_addr.sa.in.sin_port = htons(torture_server_port());
 
 	rc = inet_pton(AF_INET,
 		       torture_server_address(AF_INET),
-		       &s_addr.sa.in.sin_addr);
+		       &send_addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, &s_addr.sa.s, s_addr.sa_socklen);
+	rc = connect(s, &send_addr.sa.s, send_addr.sa_socklen);
 
 	/* msg_name = NULL */
 
