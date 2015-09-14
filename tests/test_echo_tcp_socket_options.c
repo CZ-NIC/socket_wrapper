@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdlib.h>
@@ -293,6 +294,40 @@ static void test_bind_ipv6_only(void **state)
 }
 #endif
 
+static void test_sockopt_tcp(void **state)
+{
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	int opt = -1;
+	socklen_t optlen = sizeof(int);
+	int rc;
+
+	int s;
+
+	(void) state; /* unused */
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	assert_int_not_equal(s, -1);
+
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
+
+	rc = inet_pton(addr.sa.in.sin_family,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
+	assert_int_equal(rc, 1);
+
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
+	assert_int_equal(rc, 0);
+
+	rc = getsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, &optlen);
+	assert_return_code(rc, errno);
+	assert_int_equal(opt, 0);
+
+	close(s);
+}
+
 int main(void) {
 	int rc;
 
@@ -311,6 +346,9 @@ int main(void) {
 						setup_ipv6,
 						teardown),
 #endif
+		cmocka_unit_test_setup_teardown(test_sockopt_tcp,
+						setup_echo_srv_tcp_ipv4,
+						teardown),
 	};
 
 	rc = cmocka_run_group_tests(sockopt_tests, NULL, NULL);
