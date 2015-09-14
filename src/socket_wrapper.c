@@ -3351,6 +3351,29 @@ static int swrap_getsockopt(int s, int level, int optname,
 					       optval,
 					       optlen);
 		}
+	} else if (level == IPPROTO_TCP) {
+		switch (optname) {
+#ifdef TCP_NODELAY
+		case TCP_NODELAY:
+			/*
+			 * This enables sending packets directly out over TCP.
+			 * As a unix socket is doing that any way, report it as
+			 * enabled.
+			 */
+			if (optval == NULL || optlen == NULL ||
+			    *optlen < (socklen_t)sizeof(int)) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			*optlen = sizeof(int);
+			*(int *)optval = si->tcp_nodelay;
+
+			return 0;
+#endif /* TCP_NODELAY */
+		default:
+			break;
+		}
 	}
 
 	errno = ENOPROTOOPT;
