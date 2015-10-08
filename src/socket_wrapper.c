@@ -248,6 +248,7 @@ struct socket_info
 	int connected;
 	int defer_connect;
 	int pktinfo;
+	int tcp_nodelay;
 
 	/* The unix path so we can unlink it on close() */
 	struct sockaddr_un un_addr;
@@ -3388,6 +3389,35 @@ static int swrap_setsockopt(int s, int level, int optname,
 				       optname,
 				       optval,
 				       optlen);
+	} else if (level == IPPROTO_TCP) {
+		switch (optname) {
+#ifdef TCP_NODELAY
+		case TCP_NODELAY: {
+			int i;
+
+			/*
+			 * This enables sending packets directly out over TCP.
+			 * A unix socket is doing that any way.
+			 */
+			if (optval == NULL || optlen == 0 ||
+			    optlen < (socklen_t)sizeof(int)) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			i = *discard_const_p(int, optval);
+			if (i != 0 && i != 1) {
+				errno = EINVAL;
+				return -1;
+			}
+			si->tcp_nodelay = i;
+
+			return 0;
+		}
+#endif /* TCP_NODELAY */
+		default:
+			break;
+		}
 	}
 
 	switch (si->family) {
