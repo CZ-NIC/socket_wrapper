@@ -325,6 +325,17 @@ static void test_sockopt_tcp(void **state)
 	assert_return_code(rc, errno);
 	assert_int_equal(opt, 0);
 
+	opt = 1; /* Turn on TCP_NODELAY */
+	optlen = sizeof(int);
+	rc = setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, optlen);
+	assert_return_code(rc, errno);
+
+	opt = -1;
+	optlen = sizeof(int);
+	rc = getsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, &optlen);
+	assert_return_code(rc, errno);
+	assert_int_equal(opt, 1);
+
 	close(s);
 }
 
