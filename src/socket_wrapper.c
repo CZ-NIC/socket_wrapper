@@ -3739,9 +3739,7 @@ static int swrap_sendmsg_copy_cmsg(struct cmsghdr *cmsg,
 	size_t cmspace;
 	uint8_t *p;
 
-	cmspace =
-		(*cm_data_space) +
-		CMSG_SPACE(cmsg->cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr)));
+	cmspace = *cm_data_space + CMSG_ALIGN(cmsg->cmsg_len);
 
 	p = realloc((*cm_data), cmspace);
 	if (p == NULL) {
