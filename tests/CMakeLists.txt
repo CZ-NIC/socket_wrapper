@@ -30,7 +30,8 @@ set(SWRAP_TESTS
     test_echo_tcp_get_peer_sock_name
     test_echo_udp_sendto_recvfrom
     test_echo_udp_send_recv
-    test_echo_udp_sendmsg_recvmsg)
+    test_echo_udp_sendmsg_recvmsg
+    test_swrap_unit)
 
 if (HAVE_STRUCT_MSGHDR_MSG_CONTROL)
     set(SWRAP_TESTS ${SWRAP_TESTS} test_sendmsg_recvmsg_fd)
