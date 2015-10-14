@@ -1,6 +1,10 @@
 ChangeLog
 ==========
 
+version 1.1.5 (released 2015-10-15)
+  * Added support for TCP_NODELAY in setsockopt/getsockopt
+  * Fixed cmsg space calculation
+
 version 1.1.4 (released 2015-08-25)
   * Fixed handling of msg_name in recvmsg()
   * Fixed sendmsg()/recvmsg() TCP support
