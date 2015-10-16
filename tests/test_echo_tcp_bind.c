@@ -365,7 +365,7 @@ static void test_bindresvport_ipv4(void **state)
 		       &addr.sa.in.sin_addr);
 	assert_int_equal(rc, 1);
 
-	rc = connect(s, &addr.sa.in, addr.sa_socklen);
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
 	assert_return_code(rc, errno);
 
 	close(s);
