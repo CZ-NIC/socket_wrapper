@@ -3850,7 +3850,8 @@ static ssize_t swrap_sendmsg_before(int fd,
 		msg->msg_iovlen = i;
 		if (msg->msg_iovlen == 0) {
 			*tmp_iov = msg->msg_iov[0];
-			tmp_iov->iov_len = MIN(tmp_iov->iov_len, (size_t)mtu);
+			tmp_iov->iov_len = MIN((size_t)tmp_iov->iov_len,
+					       (size_t)mtu);
 			msg->msg_iov = tmp_iov;
 			msg->msg_iovlen = 1;
 		}
@@ -4067,7 +4068,8 @@ static int swrap_recvmsg_before(int fd,
 		msg->msg_iovlen = i;
 		if (msg->msg_iovlen == 0) {
 			*tmp_iov = msg->msg_iov[0];
-			tmp_iov->iov_len = MIN(tmp_iov->iov_len, (size_t)mtu);
+			tmp_iov->iov_len = MIN((size_t)tmp_iov->iov_len,
+					       (size_t)mtu);
 			msg->msg_iov = tmp_iov;
 			msg->msg_iovlen = 1;
 		}
