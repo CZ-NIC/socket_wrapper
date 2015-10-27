@@ -4603,6 +4603,9 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 	struct swrap_address from_addr = {
 		.sa_socklen = sizeof(struct sockaddr_un),
 	};
+	struct swrap_address convert_addr = {
+		.sa_socklen = sizeof(struct sockaddr_storage),
+	};
 	struct socket_info *si;
 	struct msghdr msg;
 	struct iovec tmp;
@@ -4660,6 +4663,13 @@ static ssize_t swrap_recvmsg(int s, struct msghdr *omsg, int flags)
 		msg.msg_controllen = 0;
 	}
 #endif
+
+	/*
+	 * We convert the unix address to a IP address so we need a buffer
+	 * which can store the address in case of SOCK_DGRAM, see below.
+	 */
+	msg.msg_name = &convert_addr.sa;
+	msg.msg_namelen = convert_addr.sa_socklen;
 
 	rc = swrap_recvmsg_after(s,
 				 si,
