@@ -55,7 +55,7 @@
 #define TORTURE_ECHO_SRV_IPV6 "fd00::5357:5f0a"
 #define TORTURE_ECHO_SRV_PORT 7
 
-#define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
+#define TORTURE_SOCKET_DIR "/tmp/w_XXXXXX"
 #define TORTURE_ECHO_SRV_PIDFILE "echo_srv.pid"
 #define TORTURE_PCAP_FILE "socket_trace.pcap"
 
