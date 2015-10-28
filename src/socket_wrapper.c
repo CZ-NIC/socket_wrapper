@@ -398,6 +398,7 @@ struct swrap_libc_fns {
 #ifdef HAVE_TIMERFD_CREATE
 	int (*libc_timerfd_create)(int clockid, int flags);
 #endif
+	ssize_t (*libc_write)(int fd, const void *buf, size_t count);
 	ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
 };
 
@@ -836,6 +837,13 @@ static int libc_timerfd_create(int clockid, int flags)
 	return swrap.fns.libc_timerfd_create(clockid, flags);
 }
 #endif
+
+static ssize_t libc_write(int fd, const void *buf, size_t count)
+{
+	swrap_load_lib_function(SWRAP_LIBC, write);
+
+	return swrap.fns.libc_write(fd, buf, count);
+}
 
 static ssize_t libc_writev(int fd, const struct iovec *iov, int iovcnt)
 {
@@ -4541,6 +4549,58 @@ static ssize_t swrap_read(int s, void *buf, size_t len)
 ssize_t read(int s, void *buf, size_t len)
 {
 	return swrap_read(s, buf, len);
+}
+
+/****************************************************************************
+ *   WRITE
+ ***************************************************************************/
+
+static ssize_t swrap_write(int s, const void *buf, size_t len)
+{
+	struct msghdr msg;
+	struct iovec tmp;
+	struct sockaddr_un un_addr;
+	ssize_t ret;
+	int rc;
+	struct socket_info *si;
+
+	si = find_socket_info(s);
+	if (si == NULL) {
+		return libc_write(s, buf, len);
+	}
+
+	tmp.iov_base = discard_const_p(char, buf);
+	tmp.iov_len = len;
+
+	ZERO_STRUCT(msg);
+	msg.msg_name = NULL;           /* optional address */
+	msg.msg_namelen = 0;           /* size of address */
+	msg.msg_iov = &tmp;            /* scatter/gather array */
+	msg.msg_iovlen = 1;            /* # elements in msg_iov */
+#if HAVE_STRUCT_MSGHDR_MSG_CONTROL
+	msg.msg_control = NULL;        /* ancillary data, see below */
+	msg.msg_controllen = 0;        /* ancillary data buffer len */
+	msg.msg_flags = 0;             /* flags on received message */
+#endif
+
+	rc = swrap_sendmsg_before(s, si, &msg, &tmp, &un_addr, NULL, NULL, NULL);
+	if (rc < 0) {
+		return -1;
+	}
+
+	buf = msg.msg_iov[0].iov_base;
+	len = msg.msg_iov[0].iov_len;
+
+	ret = libc_write(s, buf, len);
+
+	swrap_sendmsg_after(s, si, &msg, NULL, ret);
+
+	return ret;
+}
+
+ssize_t write(int s, const void *buf, size_t len)
+{
+	return swrap_write(s, buf, len);
 }
 
 /****************************************************************************
