@@ -3154,6 +3154,14 @@ static int swrap_listen(int s, int backlog)
 		return libc_listen(s, backlog);
 	}
 
+	if (si->bound == 0) {
+		ret = swrap_auto_bind(s, si, si->family);
+		if (ret == -1) {
+			errno = EADDRINUSE;
+			return ret;
+		}
+	}
+
 	ret = libc_listen(s, backlog);
 
 	return ret;
