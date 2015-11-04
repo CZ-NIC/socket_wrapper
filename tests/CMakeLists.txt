@@ -20,6 +20,7 @@ target_link_libraries(${TORTURE_LIBRARY}
 
 set(SWRAP_TESTS
     test_ioctl
+    test_tcp_listen
     test_echo_tcp_socket
     test_echo_tcp_connect
     test_echo_tcp_bind
