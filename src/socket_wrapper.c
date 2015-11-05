@@ -2384,6 +2384,7 @@ static int swrap_socket(int family, int type, int protocol)
 	case AF_INET6:
 #endif
 		break;
+	case AF_NETLINK:
 	case AF_UNIX:
 		return libc_socket(family, type, protocol);
 	default:
