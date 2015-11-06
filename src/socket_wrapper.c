@@ -241,6 +241,15 @@ do { \
 #define SOCKET_TYPE_CHAR_TCP_V6		'X'
 #define SOCKET_TYPE_CHAR_UDP_V6		'Y'
 
+
+#define SOCKET_FORMAT_LONG "%c%08X%04X"
+#define SOCKET_FORMAT_V6_LONG "%c%08X%08X%08X%08X%04X"
+
+#define SOCKET_TYPE_CHAR_TCP_LONG	'Q'
+#define SOCKET_TYPE_CHAR_UDP_LONG	'W'
+#define SOCKET_TYPE_CHAR_TCP_V6_LONG	'E'
+#define SOCKET_TYPE_CHAR_UDP_V6_LONG	'R'
+
 /*
  * Set the packet MTU to 1500 bytes for stream sockets to make it it easier to
  * format PCAP capture files (as the caller will simply continue from here).
@@ -1076,6 +1085,47 @@ static const struct in6_addr *swrap_ipv6(void)
 
 	return &v;
 }
+static struct in6_addr swrap_make_ipv6(unsigned int a0, unsigned int a1, 
+						unsigned int a2, unsigned int a3)
+{
+	struct in6_addr v;
+	int i;
+	for (i = 0 ; i < 4; i++)
+	{
+		v.s6_addr[ 0 + i]	= a0;
+		v.s6_addr[ 4 + i]	= a1;
+		v.s6_addr[ 8 + i]	= a2;
+		v.s6_addr[12 + i]	= a3;
+                a0 >>= 8;
+                a1 >>= 8;
+                a2 >>= 8;
+                a3 >>= 8;
+	}
+	return v;
+}
+static void swrap_make_ipv6_ints(const unsigned char s[16], unsigned int *a0, unsigned int *a1, 
+						unsigned int *a2, unsigned int *a3)
+{
+	int i;
+
+	*a0 = 0; *a1 = 0; *a2 = 0; *a3 = 0;
+	for (i = 3 ; i > 0; i--)
+	{
+		*a0 += s[ 0 + i];
+		*a1 += s[ 4 + i];
+		*a2 += s[ 8 + i];
+		*a3 += s[12 + i];
+                *a0 <<= 8;
+                *a1 <<= 8;
+                *a2 <<= 8;
+                *a3 <<= 8;
+	}
+	*a0 += s[ 0];
+	*a1 += s[ 4];
+	*a2 += s[ 8];
+	*a3 += s[12];
+}
+
 #endif
 
 static void set_port(int family, int prt, struct swrap_address *addr)
@@ -1260,9 +1310,22 @@ static int socket_wrapper_first_free_index(void)
 	return first_free;
 }
 
+static unsigned int socket_wrapper_default_addr(void)
+{
+	const char *s = getenv("SOCKET_WRAPPER_DEFAULT_IFACE");
+	if (s) {
+		unsigned int iface;
+		if (sscanf(s, "%u", &iface) == 1) {
+			if (iface >= 1 && iface <= MAX_WRAPPED_INTERFACES) {
+				return (127<<24) | iface;
+			}
+		}
+	}
+	return (127<<24) | 0x00000001; /* 127.0.0.1 */
+}
+
 static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, socklen_t *len)
 {
-	unsigned int iface;
 	unsigned int prt;
 	const char *p;
 	char type;
@@ -1270,27 +1333,13 @@ static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, sock
 	p = strrchr(un->sun_path, '/');
 	if (p) p++; else p = un->sun_path;
 
-	if (sscanf(p, SOCKET_FORMAT, &type, &iface, &prt) != 3) {
-		errno = EINVAL;
-		return -1;
-	}
+	type = p[0];
 
-	SWRAP_LOG(SWRAP_LOG_TRACE, "type %c iface %u port %u",
-			type, iface, prt);
-
-	if (iface == 0 || iface > MAX_WRAPPED_INTERFACES) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (prt > 0xFFFF) {
-		errno = EINVAL;
-		return -1;
-	}
 
 	switch(type) {
-	case SOCKET_TYPE_CHAR_TCP:
-	case SOCKET_TYPE_CHAR_UDP: {
+	case SOCKET_TYPE_CHAR_TCP_LONG:
+	case SOCKET_TYPE_CHAR_UDP_LONG: {
+		unsigned int in4_addr;
 		struct sockaddr_in *in2 = (struct sockaddr_in *)(void *)in;
 
 		if ((*len) < sizeof(*in2)) {
@@ -1298,18 +1347,35 @@ static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, sock
 		    return -1;
 		}
 
+		if (sscanf(p, SOCKET_FORMAT_LONG, &type, &in4_addr, &prt) != 3) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		if (prt > 0xFFFF) {
+			errno = EINVAL;
+			return -1;
+		}
+
 		memset(in2, 0, sizeof(*in2));
 		in2->sin_family = AF_INET;
-		in2->sin_addr.s_addr = htonl((127<<24) | iface);
+		in2->sin_addr.s_addr = htonl(in4_addr);
 		in2->sin_port = htons(prt);
 
 		*len = sizeof(*in2);
 		break;
 	}
 #ifdef HAVE_IPV6
-	case SOCKET_TYPE_CHAR_TCP_V6:
-	case SOCKET_TYPE_CHAR_UDP_V6: {
+	case SOCKET_TYPE_CHAR_TCP_V6_LONG:
+	case SOCKET_TYPE_CHAR_UDP_V6_LONG: {
+		unsigned int in6_a0, in6_a1, in6_a2, in6_a3;
 		struct sockaddr_in6 *in2 = (struct sockaddr_in6 *)(void *)in;
+
+		if (sscanf(p, SOCKET_FORMAT_V6_LONG, &type, 
+				&in6_a0, &in6_a1, &in6_a2, &in6_a3, &prt) != 6) {
+			errno = EINVAL;
+			return -1;
+		}
 
 		if ((*len) < sizeof(*in2)) {
 			errno = EINVAL;
@@ -1318,8 +1384,7 @@ static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, sock
 
 		memset(in2, 0, sizeof(*in2));
 		in2->sin6_family = AF_INET6;
-		in2->sin6_addr = *swrap_ipv6();
-		in2->sin6_addr.s6_addr[15] = iface;
+		in2->sin6_addr = swrap_make_ipv6(in6_a0,in6_a1,in6_a2,in6_a3);
 		in2->sin6_port = htons(prt);
 
 		*len = sizeof(*in2);
@@ -1339,7 +1404,7 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 {
 	char type = '\0';
 	unsigned int prt;
-	unsigned int iface;
+	unsigned int in4_addr, in6_a0, in6_a1, in6_a2, in6_a3;
 	int is_bcast = 0;
 
 	if (bcast) *bcast = 0;
@@ -1355,12 +1420,12 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 
 		switch (si->type) {
 		case SOCK_STREAM:
-			u_type = SOCKET_TYPE_CHAR_TCP;
+			u_type = SOCKET_TYPE_CHAR_TCP_LONG;
 			break;
 		case SOCK_DGRAM:
-			u_type = SOCKET_TYPE_CHAR_UDP;
-			a_type = SOCKET_TYPE_CHAR_UDP;
-			b_type = SOCKET_TYPE_CHAR_UDP;
+			u_type = SOCKET_TYPE_CHAR_UDP_LONG;
+			a_type = SOCKET_TYPE_CHAR_UDP_LONG;
+			b_type = SOCKET_TYPE_CHAR_UDP_LONG;
 			break;
 		default:
 			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
@@ -1373,20 +1438,16 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 			/* 255.255.255.255 only udp */
 			is_bcast = 2;
 			type = a_type;
-			iface = socket_wrapper_default_iface();
+			in4_addr = socket_wrapper_default_addr();
 		} else if (b_type && addr == 0x7FFFFFFF) {
 			/* 127.255.255.255 only udp */
 			is_bcast = 1;
 			type = b_type;
-			iface = socket_wrapper_default_iface();
-		} else if ((addr & 0xFFFFFF00) == 0x7F000000) {
-			/* 127.0.0.X */
+			in4_addr = socket_wrapper_default_addr();
+		} else {
 			is_bcast = 0;
 			type = u_type;
-			iface = (addr & 0x000000FF);
-		} else {
-			errno = ENETUNREACH;
-			return -1;
+			in4_addr = addr;
 		}
 		if (bcast) *bcast = is_bcast;
 		break;
@@ -1395,14 +1456,13 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 	case AF_INET6: {
 		const struct sockaddr_in6 *in =
 		    (const struct sockaddr_in6 *)(const void *)inaddr;
-		struct in6_addr cmp1, cmp2;
 
 		switch (si->type) {
 		case SOCK_STREAM:
-			type = SOCKET_TYPE_CHAR_TCP_V6;
+			type = SOCKET_TYPE_CHAR_TCP_V6_LONG;
 			break;
 		case SOCK_DGRAM:
-			type = SOCKET_TYPE_CHAR_UDP_V6;
+			type = SOCKET_TYPE_CHAR_UDP_V6_LONG;
 			break;
 		default:
 			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
@@ -1414,16 +1474,9 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 
 		prt = ntohs(in->sin6_port);
 
-		cmp1 = *swrap_ipv6();
-		cmp2 = in->sin6_addr;
-		cmp2.s6_addr[15] = 0;
-		if (IN6_ARE_ADDR_EQUAL(&cmp1, &cmp2)) {
-			iface = in->sin6_addr.s6_addr[15];
-		} else {
-			errno = ENETUNREACH;
-			return -1;
-		}
+		/* TODO - More checks */
 
+		swrap_make_ipv6_ints(in->sin6_addr.s6_addr,&in6_a0,&in6_a1,&in6_a2,&in6_a3);
 		break;
 	}
 #endif
@@ -1447,8 +1500,16 @@ static int convert_in_un_remote(struct socket_info *si, const struct sockaddr *i
 		return 0;
 	}
 
-	snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT,
-		 socket_wrapper_dir(), type, iface, prt);
+	switch (inaddr->sa_family) {
+	case AF_INET:
+		snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT_LONG,
+			 socket_wrapper_dir(), type, in4_addr, prt);
+		break;
+	case AF_INET6:
+		snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT_V6_LONG,
+			 socket_wrapper_dir(), type, in6_a0, in6_a1, in6_a2, in6_a3, prt);
+		break;
+	}
 	SWRAP_LOG(SWRAP_LOG_DEBUG, "un path [%s]", un->sun_path);
 
 	return 0;
@@ -1459,7 +1520,7 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 {
 	char type = '\0';
 	unsigned int prt;
-	unsigned int iface;
+	unsigned int in4_addr, in6_a0, in6_a1, in6_a2, in6_a3;
 	struct stat st;
 	int is_bcast = 0;
 
@@ -1479,14 +1540,14 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 
 		switch (si->type) {
 		case SOCK_STREAM:
-			u_type = SOCKET_TYPE_CHAR_TCP;
-			d_type = SOCKET_TYPE_CHAR_TCP;
+			u_type = SOCKET_TYPE_CHAR_TCP_LONG;
+			d_type = SOCKET_TYPE_CHAR_TCP_LONG;
 			break;
 		case SOCK_DGRAM:
-			u_type = SOCKET_TYPE_CHAR_UDP;
-			d_type = SOCKET_TYPE_CHAR_UDP;
-			a_type = SOCKET_TYPE_CHAR_UDP;
-			b_type = SOCKET_TYPE_CHAR_UDP;
+			u_type = SOCKET_TYPE_CHAR_UDP_LONG;
+			d_type = SOCKET_TYPE_CHAR_UDP_LONG;
+			a_type = SOCKET_TYPE_CHAR_UDP_LONG;
+			b_type = SOCKET_TYPE_CHAR_UDP_LONG;
 			break;
 		default:
 			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
@@ -1498,26 +1559,23 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 			/* 0.0.0.0 */
 		 	is_bcast = 0;
 			type = d_type;
-			iface = socket_wrapper_default_iface();
+			in4_addr = socket_wrapper_default_addr();
 		} else if (a_type && addr == 0xFFFFFFFF) {
 			/* 255.255.255.255 only udp */
 			is_bcast = 2;
 			type = a_type;
-			iface = socket_wrapper_default_iface();
+			in4_addr = socket_wrapper_default_addr();
 		} else if (b_type && addr == 0x7FFFFFFF) {
 			/* 127.255.255.255 only udp */
 			is_bcast = 1;
 			type = b_type;
-			iface = socket_wrapper_default_iface();
-		} else if ((addr & 0xFFFFFF00) == 0x7F000000) {
+			in4_addr = socket_wrapper_default_addr();
+		} else {
 			/* 127.0.0.X */
 			is_bcast = 0;
 			type = u_type;
-			iface = (addr & 0x000000FF);
-		} else {
-			errno = EADDRNOTAVAIL;
-			return -1;
-		}
+			in4_addr = addr;
+		} 
 
 		/* Store the bind address for connect() */
 		if (si->bindname.sa_socklen == 0) {
@@ -1527,7 +1585,7 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 			ZERO_STRUCT(bind_in);
 			bind_in.sin_family = in->sin_family;
 			bind_in.sin_port = in->sin_port;
-			bind_in.sin_addr.s_addr = htonl(0x7F000000 | iface);
+			bind_in.sin_addr.s_addr = htonl(in4_addr);
 
 			si->bindname.sa_socklen = blen;
 			memcpy(&si->bindname.sa.in, &bind_in, blen);
@@ -1539,14 +1597,14 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 	case AF_INET6: {
 		const struct sockaddr_in6 *in =
 		    (const struct sockaddr_in6 *)(const void *)inaddr;
-		struct in6_addr cmp1, cmp2;
+		struct sockaddr_in6 in6_addr = *in;
 
 		switch (si->type) {
 		case SOCK_STREAM:
-			type = SOCKET_TYPE_CHAR_TCP_V6;
+			type = SOCKET_TYPE_CHAR_TCP_V6_LONG;
 			break;
 		case SOCK_DGRAM:
-			type = SOCKET_TYPE_CHAR_UDP_V6;
+			type = SOCKET_TYPE_CHAR_UDP_V6_LONG;
 			break;
 		default:
 			SWRAP_LOG(SWRAP_LOG_ERROR, "Unknown socket type!\n");
@@ -1558,17 +1616,14 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 
 		prt = ntohs(in->sin6_port);
 
-		cmp1 = *swrap_ipv6();
-		cmp2 = in->sin6_addr;
-		cmp2.s6_addr[15] = 0;
+		/* TODO - More checks */
+
 		if (IN6_IS_ADDR_UNSPECIFIED(&in->sin6_addr)) {
-			iface = socket_wrapper_default_iface();
-		} else if (IN6_ARE_ADDR_EQUAL(&cmp1, &cmp2)) {
-			iface = in->sin6_addr.s6_addr[15];
-		} else {
-			errno = EADDRNOTAVAIL;
-			return -1;
+			in6_addr.sin6_addr     = *swrap_ipv6();
+			in6_addr.sin6_addr.s6_addr[15] = socket_wrapper_default_iface();
 		}
+
+		swrap_make_ipv6_ints(in6_addr.sin6_addr.s6_addr,&in6_a0,&in6_a1,&in6_a2,&in6_a3);
 
 		/* Store the bind address for connect() */
 		if (si->bindname.sa_socklen == 0) {
@@ -1576,11 +1631,10 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 			socklen_t blen = sizeof(struct sockaddr_in6);
 
 			ZERO_STRUCT(bind_in);
-			bind_in.sin6_family = in->sin6_family;
-			bind_in.sin6_port = in->sin6_port;
+			bind_in.sin6_family = in6_addr.sin6_family;
+			bind_in.sin6_port = in6_addr.sin6_port;
 
-			bind_in.sin6_addr = *swrap_ipv6();
-			bind_in.sin6_addr.s6_addr[15] = iface;
+			bind_in.sin6_addr = in6_addr.sin6_addr;
 
 			memcpy(&si->bindname.sa.in6, &bind_in, blen);
 			si->bindname.sa_socklen = blen;
@@ -1598,16 +1652,17 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 
 	if (bcast) *bcast = is_bcast;
 
-	if (iface == 0 || iface > MAX_WRAPPED_INTERFACES) {
-		errno = EINVAL;
-		return -1;
-	}
 
 	if (prt == 0) {
 		/* handle auto-allocation of ephemeral ports */
 		for (prt = 5001; prt < 10000; prt++) {
-			snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT,
-				 socket_wrapper_dir(), type, iface, prt);
+			if (si->family == AF_INET)
+				snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT_LONG,
+					 socket_wrapper_dir(), type, in4_addr, prt);
+			else
+				snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT_V6_LONG,
+					 socket_wrapper_dir(), type, in6_a0,in6_a1, in6_a2, in6_a3, prt);
+
 			if (stat(un->sun_path, &st) == 0) continue;
 
 			set_port(si->family, prt, &si->myname);
@@ -1621,8 +1676,12 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 		}
 	}
 
-	snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT,
-		 socket_wrapper_dir(), type, iface, prt);
+	if (si->family == AF_INET)
+		snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT_LONG,
+			 socket_wrapper_dir(), type, in4_addr, prt);
+	else
+		snprintf(un->sun_path, sizeof(un->sun_path), "%s/"SOCKET_FORMAT_V6_LONG,
+			 socket_wrapper_dir(), type, in6_a0,in6_a1, in6_a2, in6_a3, prt);
 	SWRAP_LOG(SWRAP_LOG_DEBUG, "un path [%s]", un->sun_path);
 	return 0;
 }
@@ -3107,6 +3166,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 	char type;
 	int ret;
 	int port;
+	unsigned int in4_addr, in6_a0, in6_a1, in6_a2, in6_a3;
 	struct stat st;
 
 	if (autobind_start_init != 1) {
@@ -3124,10 +3184,10 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 
 		switch (si->type) {
 		case SOCK_STREAM:
-			type = SOCKET_TYPE_CHAR_TCP;
+			type = SOCKET_TYPE_CHAR_TCP_LONG;
 			break;
 		case SOCK_DGRAM:
-			type = SOCKET_TYPE_CHAR_UDP;
+			type = SOCKET_TYPE_CHAR_UDP_LONG;
 			break;
 		default:
 		    errno = ESOCKTNOSUPPORT;
@@ -3136,8 +3196,8 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 
 		memset(&in, 0, sizeof(in));
 		in.sin_family = AF_INET;
-		in.sin_addr.s_addr = htonl(127<<24 |
-					   socket_wrapper_default_iface());
+		in4_addr = socket_wrapper_default_addr();
+		in.sin_addr.s_addr = htonl(in4_addr);
 
 		si->myname = (struct swrap_address) {
 			.sa_socklen = sizeof(in),
@@ -3156,10 +3216,10 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 
 		switch (si->type) {
 		case SOCK_STREAM:
-			type = SOCKET_TYPE_CHAR_TCP_V6;
+			type = SOCKET_TYPE_CHAR_TCP_V6_LONG;
 			break;
 		case SOCK_DGRAM:
-			type = SOCKET_TYPE_CHAR_UDP_V6;
+			type = SOCKET_TYPE_CHAR_UDP_V6_LONG;
 			break;
 		default:
 			errno = ESOCKTNOSUPPORT;
@@ -3175,6 +3235,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 			.sa_socklen = sizeof(in6),
 		};
 		memcpy(&si->myname.sa.in6, &in6, si->myname.sa_socklen);
+		swrap_make_ipv6_ints(in6.sin6_addr.s6_addr,&in6_a0,&in6_a1,&in6_a2,&in6_a3);
 		break;
 	}
 #endif
@@ -3189,9 +3250,16 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 
 	for (i = 0; i < SOCKET_MAX_SOCKETS; i++) {
 		port = autobind_start + i;
-		snprintf(un_addr.sa.un.sun_path, sizeof(un_addr.sa.un.sun_path),
-			 "%s/"SOCKET_FORMAT, socket_wrapper_dir(),
-			 type, socket_wrapper_default_iface(), port);
+
+		if (family == AF_INET)
+			snprintf(un_addr.sa.un.sun_path, sizeof(un_addr.sa.un.sun_path),
+				"%s/"SOCKET_FORMAT_LONG, socket_wrapper_dir(),
+				type, in4_addr, port);
+		else
+			snprintf(un_addr.sa.un.sun_path, sizeof(un_addr.sa.un.sun_path),
+				"%s/"SOCKET_FORMAT_V6_LONG, socket_wrapper_dir(),
+				type, in6_a0,in6_a1, in6_a2, in6_a3, port);
+
 		if (stat(un_addr.sa.un.sun_path, &st) == 0) continue;
 
 		ret = libc_bind(fd, &un_addr.sa.s, un_addr.sa_socklen);
@@ -3203,6 +3271,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 
 		si->bound = 1;
 		autobind_start = port + 1;
+		SWRAP_LOG(SWRAP_LOG_TRACE, "bound to: %s", un_addr.sa.un.sun_path);
 		break;
 	}
 	if (i == SOCKET_MAX_SOCKETS) {
@@ -3210,7 +3279,7 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 					   "interface "SOCKET_FORMAT,
 					   SOCKET_MAX_SOCKETS,
 					   type,
-					   socket_wrapper_default_iface(),
+					   socket_wrapper_default_addr(),
 					   0);
 		errno = ENFILE;
 		return -1;
