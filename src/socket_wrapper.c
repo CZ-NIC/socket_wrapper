@@ -80,6 +80,7 @@
 #include <rpc/rpc.h>
 #endif
 #include <pthread.h>
+#include <dirent.h>
 
 enum swrap_dbglvl_e {
 	SWRAP_LOG_ERROR = 0,
@@ -4889,11 +4890,16 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 	len = msg.msg_iov[0].iov_len;
 
 	if (bcast) {
-		struct stat st;
-		unsigned int iface;
-		unsigned int prt = ntohs(((const struct sockaddr_in *)(const void *)to)->sin_port);
+/*		struct stat st; 
+		unsigned int iface;  */
+		unsigned int prt = ntohs(((const struct sockaddr_in *)(const void *)to)->sin_port); 
+		unsigned int remote_prt;
+		unsigned int in4_addr;
 		char type;
+		DIR *d;
+		struct dirent *dir;
 
+/*
 		type = SOCKET_TYPE_CHAR_UDP;
 
 		for(iface=0; iface <= MAX_WRAPPED_INTERFACES; iface++) {
@@ -4903,13 +4909,37 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 				 socket_wrapper_dir(), type, iface, prt);
 			if (stat(un_addr.sa.un.sun_path, &st) != 0) continue;
 
-			/* ignore the any errors in broadcast sends */
+			/ * ignore the any errors in broadcast sends * /
 			libc_sendto(s,
 				    buf,
 				    len,
 				    flags,
 				    &un_addr.sa.s,
 				    un_addr.sa_socklen);
+		}
+*/
+
+		d = opendir(socket_wrapper_dir());
+		if (d) {
+			while ((dir = readdir(d)) != NULL) {
+				if (dir->d_name[0] == SOCKET_TYPE_CHAR_UDP_LONG)
+					/* TODO - use S_ISSOCK ? */
+					if (sscanf(dir->d_name, SOCKET_FORMAT_LONG, &type, &in4_addr, &remote_prt) == 3) 
+						if (prt == remote_prt) {
+							snprintf(un_addr.sa.un.sun_path,
+								sizeof(un_addr.sa.un.sun_path),
+								"%s/%s",
+								socket_wrapper_dir(),dir->d_name);
+							libc_sendto(s,
+								buf,
+						    		len,
+						    		flags,
+						    		&un_addr.sa.s,
+						    		un_addr.sa_socklen);
+							SWRAP_LOG(SWRAP_LOG_DEBUG,"send bcast packet to %s", dir->d_name);
+						}
+			}
+			closedir(d);
 		}
 
 		swrap_pcap_dump_packet(si, to, SWRAP_SENDTO, buf, len);
@@ -5347,8 +5377,8 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 	}
 
 	if (bcast) {
-		struct stat st;
-		unsigned int iface;
+//		struct stat st;
+//		unsigned int iface;
 		unsigned int prt = ntohs(((const struct sockaddr_in *)(const void *)to)->sin_port);
 		char type;
 		size_t i, len = 0;
@@ -5356,6 +5386,12 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 		off_t ofs = 0;
 		size_t avail = 0;
 		size_t remain;
+
+		unsigned int remote_prt;
+		unsigned int in4_addr;
+		DIR *d;
+		struct dirent *dir;
+
 
 		for (i = 0; i < (size_t)msg.msg_iovlen; i++) {
 			avail += msg.msg_iov[i].iov_len;
@@ -5378,7 +5414,8 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 			ofs += this_time;
 			remain -= this_time;
 		}
-
+		
+		/*
 		type = SOCKET_TYPE_CHAR_UDP;
 
 		for(iface=0; iface <= MAX_WRAPPED_INTERFACES; iface++) {
@@ -5386,11 +5423,31 @@ static ssize_t swrap_sendmsg(int s, const struct msghdr *omsg, int flags)
 				 socket_wrapper_dir(), type, iface, prt);
 			if (stat(un_addr.sun_path, &st) != 0) continue;
 
-			msg.msg_name = &un_addr;           /* optional address */
-			msg.msg_namelen = sizeof(un_addr); /* size of address */
+			msg.msg_name = &un_addr;           / * optional address * /
+			msg.msg_namelen = sizeof(un_addr); / * size of address * /
 
-			/* ignore the any errors in broadcast sends */
+			/ * ignore the any errors in broadcast sends * /
 			libc_sendmsg(s, &msg, flags);
+		}
+		*/
+
+
+		d = opendir(socket_wrapper_dir());
+		if (d) {
+			while ((dir = readdir(d)) != NULL) {
+				if (dir->d_name[0] == SOCKET_TYPE_CHAR_UDP_LONG)
+					/* TODO - use S_ISSOCK ? */
+					if (sscanf(dir->d_name, SOCKET_FORMAT_LONG, &type, &in4_addr, &remote_prt) == 3) 
+						if (prt == remote_prt) {
+							snprintf(un_addr.sun_path,
+								sizeof(un_addr.sun_path),
+								"%s/%s",
+								socket_wrapper_dir(),dir->d_name);
+							libc_sendmsg(s, &msg, flags);
+							SWRAP_LOG(SWRAP_LOG_DEBUG,"send bcast packet to %s", dir->d_name);
+						}
+			}
+			closedir(d);
 		}
 
 		swrap_pcap_dump_packet(si, to, SWRAP_SENDTO, buf, len);
