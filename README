@@ -1,7 +1,9 @@
 SOCKET_WRAPPER
 ==============
 
-This is a library passing all socket communications through unix sockets.
+This is a modification of initial socket_wrapper (https://cwrap.org/socket_wrapper.html) library. 
+Essence : functionally both libraries are equal. But here implemented some minor changes intended 
+to ensure the possibility of using arbitrary IP addresses instead of private-range IP addresses.
 
 DESCRIPTION
 -----------
@@ -16,9 +18,4 @@ or the raw text version:
 
 For installation instructions please take a look at the README.install file.
 
-MAILINGLIST
------------
 
-As the mailing list samba-technical is used and can be found here:
-
-https://lists.samba.org/mailman/listinfo/samba-technical
