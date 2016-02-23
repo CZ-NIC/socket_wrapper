@@ -1855,11 +1855,10 @@ static uint8_t *swrap_pcap_packet_init(struct timeval *tval,
 		alloc_len = SWRAP_PACKET_MIN_ALLOC;
 	}
 
-	base = (uint8_t *)malloc(alloc_len);
+	base = (uint8_t *)calloc(1, alloc_len);
 	if (base == NULL) {
 		return NULL;
 	}
-	memset(base, 0x0, alloc_len);
 
 	buf = base;
 
@@ -2436,8 +2435,7 @@ static int swrap_socket(int family, int type, int protocol)
 		swrap_remove_stale(fd);
 	}
 
-	si = (struct socket_info *)malloc(sizeof(struct socket_info));
-	memset(si, 0, sizeof(struct socket_info));
+	si = (struct socket_info *)calloc(1, sizeof(struct socket_info));
 	if (si == NULL) {
 		errno = ENOMEM;
 		return -1;
@@ -2631,8 +2629,12 @@ static int swrap_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 		return ret;
 	}
 
-	child_si = (struct socket_info *)malloc(sizeof(struct socket_info));
-	memset(child_si, 0, sizeof(struct socket_info));
+	child_si = (struct socket_info *)calloc(1, sizeof(struct socket_info));
+	if (child_si == NULL) {
+		close(fd);
+		errno = ENOMEM;
+		return -1;
+	}
 
 	child_fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
 	if (child_fi == NULL) {
