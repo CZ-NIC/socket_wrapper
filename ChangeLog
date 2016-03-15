@@ -1,6 +1,12 @@
 ChangeLog
 ==========
 
+version 1.1.6 (released 2016-03-15)
+  * Added a wrapper for write()
+  * Added support for automatic binding of ephemeral ports
+  * Fixed recvmsg() with UDP
+  * Fixed AF_NETLINK sockets
+
 version 1.1.5 (released 2015-10-15)
   * Added support for TCP_NODELAY in setsockopt/getsockopt
   * Fixed cmsg space calculation
