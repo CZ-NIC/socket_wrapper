@@ -2407,6 +2407,9 @@ static int swrap_socket(int family, int type, int protocol)
 #ifdef AF_NETLINK
 	case AF_NETLINK:
 #endif /* AF_NETLINK */
+#ifdef AF_PACKET
+	case AF_PACKET:
+#endif /* AF_PACKET */
 	case AF_UNIX:
 		return libc_socket(family, type, protocol);
 	default:
