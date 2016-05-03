@@ -62,6 +62,7 @@ check_function_exists(signalfd HAVE_SIGNALFD)
 check_function_exists(eventfd HAVE_EVENTFD)
 check_function_exists(timerfd_create HAVE_TIMERFD_CREATE)
 check_function_exists(bindresvport HAVE_BINDRESVPORT)
+check_function_exists(accept4 HAVE_ACCEPT4)
 
 check_function_exists(pledge HAVE_PLEDGE)
 
