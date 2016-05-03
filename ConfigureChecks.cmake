@@ -63,6 +63,8 @@ check_function_exists(eventfd HAVE_EVENTFD)
 check_function_exists(timerfd_create HAVE_TIMERFD_CREATE)
 check_function_exists(bindresvport HAVE_BINDRESVPORT)
 
+check_function_exists(pledge HAVE_PLEDGE)
+
 
 if (UNIX)
     if (NOT LINUX)

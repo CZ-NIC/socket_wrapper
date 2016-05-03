@@ -5248,6 +5248,16 @@ int eventfd(int count, int flags)
 }
 #endif
 
+#ifdef HAVE_PLEDGE
+int pledge(const char *promises, const char *paths[])
+{
+	(void)promises; /* unused */
+	(void)paths; /* unused */
+
+	return 0;
+}
+#endif /* HAVE_PLEDGE */
+
 /****************************
  * DESTRUCTOR
  ***************************/
