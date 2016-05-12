@@ -192,6 +192,55 @@ static void test_sendto_recvfrom_ipv6(void **state)
 }
 #endif
 
+static void test_connect_sendto_ipv4(void **state)
+{
+	struct torture_address addr = {
+		.sa_socklen = sizeof(struct sockaddr_in),
+	};
+	char send_buf[] = "packet.0";
+	char recv_buf[64] = {0};
+	ssize_t ret;
+	int rc;
+	int s;
+
+	(void) state; /* unused */
+
+	addr.sa.in.sin_family = AF_INET;
+	addr.sa.in.sin_port = htons(torture_server_port());
+
+	rc = inet_pton(AF_INET,
+		       torture_server_address(AF_INET),
+		       &addr.sa.in.sin_addr);
+	assert_int_equal(rc, 1);
+
+	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	assert_int_not_equal(s, -1);
+
+	/* Now, connect */
+	rc = connect(s, &addr.sa.s, addr.sa_socklen);
+	assert_return_code(rc, errno);
+
+	ret = sendto(s,
+		     send_buf,
+		     sizeof(send_buf),
+		     0,
+		     &addr.sa.s,
+		     addr.sa_socklen);
+	assert_return_code(ret, errno);
+
+	ret = recvfrom(s,
+		       recv_buf,
+		       sizeof(recv_buf),
+		       0,
+		       NULL,
+		       0);
+	assert_return_code(ret, errno);
+
+	assert_memory_equal(send_buf, recv_buf, sizeof(send_buf));
+
+	close(s);
+}
+
 int main(void) {
 	int rc;
 
@@ -204,6 +253,9 @@ int main(void) {
 						setup_echo_srv_udp_ipv6,
 						teardown),
 #endif
+		cmocka_unit_test_setup_teardown(test_connect_sendto_ipv4,
+						setup_echo_srv_udp_ipv4,
+						teardown),
 	};
 
 	rc = cmocka_run_group_tests(sendto_tests, NULL, NULL);
