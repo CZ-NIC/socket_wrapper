@@ -3922,9 +3922,15 @@ static ssize_t swrap_sendmsg_before(int fd,
 	}
 	case SOCK_DGRAM:
 		if (si->connected) {
-			if (msg->msg_name) {
-				errno = EISCONN;
-				return -1;
+			if (msg->msg_name != NULL) {
+				/*
+				 * We are dealing with unix sockets and if we
+				 * are connected, we should only talk to the
+				 * connected unix path. Using the fd to send
+				 * to another server would be hard to achieve.
+				 */
+				msg->msg_name = NULL;
+				msg->msg_namelen = 0;
 			}
 		} else {
 			const struct sockaddr *msg_name;
@@ -4471,12 +4477,25 @@ static ssize_t swrap_sendto(int s, const void *buf, size_t len, int flags,
 		return len;
 	}
 
-	ret = libc_sendto(s,
-			  buf,
-			  len,
-			  flags,
-			  (struct sockaddr *)msg.msg_name,
-			  msg.msg_namelen);
+	/*
+	 * If it is a dgram socket and we are connected, don't include the
+	 * 'to' address.
+	 */
+	if (si->type == SOCK_DGRAM && si->connected) {
+		ret = libc_sendto(s,
+				  buf,
+				  len,
+				  flags,
+				  NULL,
+				  0);
+	} else {
+		ret = libc_sendto(s,
+				  buf,
+				  len,
+				  flags,
+				  (struct sockaddr *)msg.msg_name,
+				  msg.msg_namelen);
+	}
 
 	swrap_sendmsg_after(s, si, &msg, to, ret);
 
