@@ -1,6 +1,12 @@
 ChangeLog
 ==========
 
+version 1.1.7 (released 2016-05-20)
+  * Added support for accept4()
+  * Added support for OpenBSD
+  * Fixed sendto() with UDP and a connected socket
+  * Fixed AF_RAWLINK sockets
+
 version 1.1.6 (released 2016-03-15)
   * Added a wrapper for write()
   * Added support for automatic binding of ephemeral ports
