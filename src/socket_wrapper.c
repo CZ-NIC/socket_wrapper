@@ -233,11 +233,14 @@ struct swrap_address {
 struct socket_info_fd {
 	struct socket_info_fd *prev, *next;
 	int fd;
+
+	/* Points to list of socket_info structures */
+	struct socket_info *si;
 };
 
 struct socket_info
 {
-	struct socket_info_fd *fds;
+	unsigned int refcount;
 
 	int family;
 	int type;
@@ -261,15 +264,14 @@ struct socket_info
 		unsigned long pck_snd;
 		unsigned long pck_rcv;
 	} io;
-
-	struct socket_info *prev, *next;
 };
 
 /*
- * File descriptors are shared between threads so we should share socket
- * information too.
+ * While socket file descriptors are passed among different processes, the
+ * numerical value gets changed. So its better to store it locally to each
+ * process rather than including it within socket_info which will be shared.
  */
-struct socket_info *sockets;
+static struct socket_info_fd *socket_fds;
 
 /* Function prototypes */
 
@@ -1359,26 +1361,34 @@ static int convert_in_un_alloc(struct socket_info *si, const struct sockaddr *in
 	return 0;
 }
 
-static struct socket_info *find_socket_info(int fd)
+static struct socket_info_fd *find_socket_info_fd(int fd)
 {
-	struct socket_info *i;
+	struct socket_info_fd *f;
 
-	for (i = sockets; i; i = i->next) {
-		struct socket_info_fd *f;
-		for (f = i->fds; f; f = f->next) {
-			if (f->fd == fd) {
-				return i;
-			}
+	for (f = socket_fds; f; f = f->next) {
+		if (f->fd == fd) {
+			return f;
 		}
 	}
 
 	return NULL;
 }
 
+static struct socket_info *find_socket_info(int fd)
+{
+	struct socket_info_fd *fi = find_socket_info_fd(fd);
+
+	if (fi == NULL) {
+		return NULL;
+	}
+
+	return fi->si;
+}
+
 #if 0 /* FIXME */
 static bool check_addr_port_in_use(const struct sockaddr *sa, socklen_t len)
 {
-	struct socket_info *s;
+	struct socket_info_fd *f;
 
 	/* first catch invalid input */
 	switch (sa->sa_family) {
@@ -1399,7 +1409,9 @@ static bool check_addr_port_in_use(const struct sockaddr *sa, socklen_t len)
 		break;
 	}
 
-	for (s = sockets; s != NULL; s = s->next) {
+	for (f = socket_fds; f; f = f->next) {
+		struct socket_info *s = f->si;
+
 		if (s->myname == NULL) {
 			continue;
 		}
@@ -1461,29 +1473,29 @@ static bool check_addr_port_in_use(const struct sockaddr *sa, socklen_t len)
 
 static void swrap_remove_stale(int fd)
 {
-	struct socket_info *si = find_socket_info(fd);
-	struct socket_info_fd *fi;
+	struct socket_info_fd *fi = find_socket_info_fd(fd);
+	struct socket_info *si;
 
-	if (si == NULL) {
+	if (fi == NULL) {
 		return;
 	}
 
-	for (fi = si->fds; fi; fi = fi->next) {
-		if (fi->fd == fd) {
-			SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
-			SWRAP_DLIST_REMOVE(si->fds, fi);
-			free(fi);
-			break;
-		}
+	si = fi->si;
+
+	SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
+	SWRAP_DLIST_REMOVE(socket_fds, fi);
+	free(fi);
+
+	si->refcount--;
+
+	if (si->refcount > 0) {
+		return;
 	}
 
-	if (si->fds == NULL) {
-		SWRAP_DLIST_REMOVE(sockets, si);
-		if (si->un_addr.sun_path[0] != '\0') {
-			unlink(si->un_addr.sun_path);
-		}
-		free(si);
+	if (si->un_addr.sun_path[0] != '\0') {
+		unlink(si->un_addr.sun_path);
 	}
+	free(si);
 }
 
 static int sockaddr_convert_to_un(struct socket_info *si,
@@ -2504,10 +2516,11 @@ static int swrap_socket(int family, int type, int protocol)
 		return -1;
 	}
 
+	si->refcount = 1;
 	fi->fd = fd;
+	fi->si = si;
 
-	SWRAP_DLIST_ADD(si->fds, fi);
-	SWRAP_DLIST_ADD(sockets, si);
+	SWRAP_DLIST_ADD(socket_fds, fi);
 
 	SWRAP_LOG(SWRAP_LOG_TRACE,
 		  "Created %s socket for protocol %s",
@@ -2729,8 +2742,10 @@ static int swrap_accept(int s,
 	};
 	memcpy(&child_si->myname.sa.ss, &in_my_addr.sa.ss, in_my_addr.sa_socklen);
 
-	SWRAP_DLIST_ADD(child_si->fds, child_fi);
-	SWRAP_DLIST_ADD(sockets, child_si);
+	child_si->refcount = 1;
+	child_fi->si = child_si;
+
+	SWRAP_DLIST_ADD(socket_fds, child_fi);
 
 	if (addr != NULL) {
 		swrap_pcap_dump_packet(child_si, addr, SWRAP_ACCEPT_SEND, NULL, 0);
@@ -5078,28 +5093,25 @@ ssize_t writev(int s, const struct iovec *vector, int count)
 
 static int swrap_close(int fd)
 {
-	struct socket_info *si = find_socket_info(fd);
-	struct socket_info_fd *fi;
+	struct socket_info_fd *fi = find_socket_info_fd(fd);
+	struct socket_info *si = NULL;
 	int ret;
 
-	if (!si) {
+	if (fi == NULL) {
 		return libc_close(fd);
 	}
 
-	for (fi = si->fds; fi; fi = fi->next) {
-		if (fi->fd == fd) {
-			SWRAP_DLIST_REMOVE(si->fds, fi);
-			free(fi);
-			break;
-		}
-	}
+	si = fi->si;
 
-	if (si->fds) {
+	SWRAP_DLIST_REMOVE(socket_fds, fi);
+	free(fi);
+
+	si->refcount--;
+
+	if (si->refcount > 0) {
 		/* there are still references left */
 		return libc_close(fd);
 	}
-
-	SWRAP_DLIST_REMOVE(sockets, si);
 
 	if (si->myname.sa_socklen > 0 && si->peername.sa_socklen > 0) {
 		swrap_pcap_dump_packet(si, NULL, SWRAP_CLOSE_SEND, NULL, 0);
@@ -5154,10 +5166,13 @@ static int swrap_dup(int fd)
 		return -1;
 	}
 
+	si->refcount++;
+	fi->si = si;
+
 	/* Make sure we don't have an entry for the fd */
 	swrap_remove_stale(fi->fd);
 
-	SWRAP_DLIST_ADD(si->fds, fi);
+	SWRAP_DLIST_ADD(socket_fds, fi);
 	return fi->fd;
 }
 
@@ -5211,10 +5226,13 @@ static int swrap_dup2(int fd, int newfd)
 		return -1;
 	}
 
+	si->refcount++;
+	fi->si = si;
+
 	/* Make sure we don't have an entry for the fd */
 	swrap_remove_stale(fi->fd);
 
-	SWRAP_DLIST_ADD(si->fds, fi);
+	SWRAP_DLIST_ADD(socket_fds, fi);
 	return fi->fd;
 }
 
@@ -5256,10 +5274,13 @@ static int swrap_vfcntl(int fd, int cmd, va_list va)
 			return -1;
 		}
 
+		si->refcount++;
+		fi->si = si;
+
 		/* Make sure we don't have an entry for the fd */
 		swrap_remove_stale(fi->fd);
 
-		SWRAP_DLIST_ADD(si->fds, fi);
+		SWRAP_DLIST_ADD(socket_fds, fi);
 
 		rc = fi->fd;
 		break;
@@ -5332,14 +5353,11 @@ int pledge(const char *promises, const char *paths[])
  */
 void swrap_destructor(void)
 {
-	struct socket_info *s = sockets;
+	struct socket_info_fd *s = socket_fds;
 
 	while (s != NULL) {
-		struct socket_info_fd *f = s->fds;
-		if (f != NULL) {
-			swrap_close(f->fd);
-		}
-		s = sockets;
+		swrap_close(s->fd);
+		s = socket_fds;
 	}
 
 	if (swrap.libc_handle != NULL) {
