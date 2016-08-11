@@ -2458,10 +2458,7 @@ static int swrap_socket(int family, int type, int protocol)
 	}
 
 	/* Check if we have a stale fd and remove it */
-	si = find_socket_info(fd);
-	if (si != NULL) {
-		swrap_remove_stale(fd);
-	}
+	swrap_remove_stale(fd);
 
 	si = (struct socket_info *)calloc(1, sizeof(struct socket_info));
 	if (si == NULL) {
