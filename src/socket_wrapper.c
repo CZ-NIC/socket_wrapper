@@ -2682,8 +2682,6 @@ static int swrap_accept(int s,
 
 	child_fi->fd = fd;
 
-	SWRAP_DLIST_ADD(child_si->fds, child_fi);
-
 	child_si->family = parent_si->family;
 	child_si->type = parent_si->type;
 	child_si->protocol = parent_si->protocol;
@@ -2736,6 +2734,7 @@ static int swrap_accept(int s,
 	};
 	memcpy(&child_si->myname.sa.ss, &in_my_addr.sa.ss, in_my_addr.sa_socklen);
 
+	SWRAP_DLIST_ADD(child_si->fds, child_fi);
 	SWRAP_DLIST_ADD(sockets, child_si);
 
 	if (addr != NULL) {
