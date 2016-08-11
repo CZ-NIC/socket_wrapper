@@ -1469,23 +1469,25 @@ static void swrap_remove_stale(int fd)
 	struct socket_info *si = find_socket_info(fd);
 	struct socket_info_fd *fi;
 
-	if (si != NULL) {
-		for (fi = si->fds; fi; fi = fi->next) {
-			if (fi->fd == fd) {
-				SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
-				SWRAP_DLIST_REMOVE(si->fds, fi);
-				free(fi);
-				break;
-			}
-		}
+	if (si == NULL) {
+		return;
+	}
 
-		if (si->fds == NULL) {
-			SWRAP_DLIST_REMOVE(sockets, si);
-			if (si->un_addr.sun_path[0] != '\0') {
-				unlink(si->un_addr.sun_path);
-			}
-			free(si);
+	for (fi = si->fds; fi; fi = fi->next) {
+		if (fi->fd == fd) {
+			SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
+			SWRAP_DLIST_REMOVE(si->fds, fi);
+			free(fi);
+			break;
 		}
+	}
+
+	if (si->fds == NULL) {
+		SWRAP_DLIST_REMOVE(sockets, si);
+		if (si->un_addr.sun_path[0] != '\0') {
+			unlink(si->un_addr.sun_path);
+		}
+		free(si);
 	}
 }
 
