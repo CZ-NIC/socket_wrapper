@@ -1403,6 +1403,7 @@ static struct socket_info *find_socket_info(int fd)
 static bool check_addr_port_in_use(const struct sockaddr *sa, socklen_t len)
 {
 	struct socket_info_fd *f;
+	const struct socket_info *last_s = NULL;
 
 	/* first catch invalid input */
 	switch (sa->sa_family) {
@@ -1425,6 +1426,11 @@ static bool check_addr_port_in_use(const struct sockaddr *sa, socklen_t len)
 
 	for (f = socket_fds; f; f = f->next) {
 		struct socket_info *s = f->si;
+
+		if (s == last_s) {
+			continue;
+		}
+		last_s = s;
 
 		if (s->myname == NULL) {
 			continue;
