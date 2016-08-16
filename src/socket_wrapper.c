@@ -5158,13 +5158,14 @@ int close(int fd)
 static int swrap_dup(int fd)
 {
 	struct socket_info *si;
-	struct socket_info_fd *fi;
+	struct socket_info_fd *src_fi, *fi;
 
-	si = find_socket_info(fd);
-
-	if (!si) {
+	src_fi = find_socket_info_fd(fd);
+	if (src_fi == NULL) {
 		return libc_dup(fd);
 	}
+
+	si = src_fi->si;
 
 	fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
 	if (fi == NULL) {
@@ -5186,7 +5187,7 @@ static int swrap_dup(int fd)
 	/* Make sure we don't have an entry for the fd */
 	swrap_remove_stale(fi->fd);
 
-	SWRAP_DLIST_ADD(socket_fds, fi);
+	SWRAP_DLIST_ADD_AFTER(socket_fds, fi, src_fi);
 	return fi->fd;
 }
 
