@@ -5186,6 +5186,16 @@ static int swrap_dup2(int fd, int newfd)
 		return libc_dup2(fd, newfd);
 	}
 
+	if (fd == newfd) {
+		/*
+		 * According to the manpage:
+		 *
+		 * "If oldfd is a valid file descriptor, and newfd has the same
+		 * value as oldfd, then dup2() does nothing, and returns newfd."
+		 */
+		return newfd;
+	}
+
 	if (find_socket_info(newfd)) {
 		/* dup2() does an implicit close of newfd, which we
 		 * need to emulate */
