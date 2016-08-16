@@ -5263,16 +5263,16 @@ int dup2(int fd, int newfd)
 
 static int swrap_vfcntl(int fd, int cmd, va_list va)
 {
-	struct socket_info_fd *fi;
+	struct socket_info_fd *src_fi, *fi;
 	struct socket_info *si;
 	int rc;
 
-	si = find_socket_info(fd);
-	if (si == NULL) {
-		rc = libc_vfcntl(fd, cmd, va);
-
-		return rc;
+	src_fi = find_socket_info_fd(fd);
+	if (src_fi == NULL) {
+		return libc_vfcntl(fd, cmd, va);
 	}
+
+	si = src_fi->si;
 
 	switch (cmd) {
 	case F_DUPFD:
@@ -5296,7 +5296,7 @@ static int swrap_vfcntl(int fd, int cmd, va_list va)
 		/* Make sure we don't have an entry for the fd */
 		swrap_remove_stale(fi->fd);
 
-		SWRAP_DLIST_ADD(socket_fds, fi);
+		SWRAP_DLIST_ADD_AFTER(socket_fds, fi, src_fi);
 
 		rc = fi->fd;
 		break;
