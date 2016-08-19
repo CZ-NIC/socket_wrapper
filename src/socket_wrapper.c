@@ -413,11 +413,6 @@ struct swrap {
 	void *libc_handle;
 	void *libsocket_handle;
 
-	bool initialised;
-	bool enabled;
-
-	char *socket_dir;
-
 	struct swrap_libc_fns fns;
 };
 
