@@ -226,6 +226,14 @@ do { \
 
 #define SOCKET_MAX_SOCKETS 1024
 
+
+/*
+ * Maximum number of socket_info structures that can
+ * be used. Can be overriden by the environment variable
+ * SOCKET_WRAPPER_MAX_SOCKETS.
+ */
+#define SOCKET_WRAPPER_MAX_SOCKETS_DEFAULT 65535
+
 /* This limit is to avoid broadcast sendto() needing to stat too many
  * files.  It may be raised (with a performance cost) to up to 254
  * without changing the format above */
@@ -248,8 +256,11 @@ struct socket_info_fd {
 	struct socket_info_fd *prev, *next;
 	int fd;
 
-	/* Points to list of socket_info structures */
-	struct socket_info *si;
+	/*
+	 * Points to corresponding index in array of
+	 * socket_info structures
+	 */
+	int si_index;
 };
 
 struct socket_info
@@ -279,6 +290,9 @@ struct socket_info
 		unsigned long pck_rcv;
 	} io;
 };
+
+static struct socket_info *sockets;
+static size_t max_sockets = 0;
 
 /*
  * While socket file descriptors are passed among different processes, the
@@ -986,11 +1000,64 @@ done:
 	return max_mtu;
 }
 
+static size_t socket_wrapper_max_sockets(void)
+{
+	const char *s;
+	unsigned long tmp;
+	char *endp;
+
+	if (max_sockets != 0) {
+		return max_sockets;
+	}
+
+	max_sockets = SOCKET_WRAPPER_MAX_SOCKETS_DEFAULT;
+
+	s = getenv("SOCKET_WRAPPER_MAX_SOCKETS");
+	if (s == NULL || s[0] == '\0') {
+		goto done;
+	}
+
+	tmp = strtoul(s, &endp, 10);
+	if (s == endp) {
+		goto done;
+	}
+
+	max_sockets = tmp;
+
+done:
+	return max_sockets;
+}
+
+static void socket_wrapper_init_sockets(void)
+{
+
+	if (sockets != NULL) {
+		return;
+	}
+
+	max_sockets = socket_wrapper_max_sockets();
+
+	sockets = (struct socket_info *)calloc(max_sockets,
+					       sizeof(struct socket_info));
+
+	if (sockets == NULL) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Failed to allocate sockets array.\n");
+		exit(-1);
+	}
+}
+
 bool socket_wrapper_enabled(void)
 {
 	const char *s = socket_wrapper_dir();
 
-	return s != NULL ? true : false;
+	if (s == NULL) {
+		return false;
+	}
+
+	socket_wrapper_init_sockets();
+
+	return true;
 }
 
 static unsigned int socket_wrapper_default_iface(void)
@@ -1006,6 +1073,20 @@ static unsigned int socket_wrapper_default_iface(void)
 	}
 
 	return 1;/* 127.0.0.1 */
+}
+
+static int socket_wrapper_first_free_index(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < max_sockets; ++i) {
+		if (sockets[i].refcount == 0) {
+			ZERO_STRUCT(sockets[i]);
+			return i;
+		}
+	}
+
+	return -1;
 }
 
 static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, socklen_t *len)
@@ -1388,15 +1469,26 @@ static struct socket_info_fd *find_socket_info_fd(int fd)
 	return NULL;
 }
 
-static struct socket_info *find_socket_info(int fd)
+static int find_socket_info_index(int fd)
 {
 	struct socket_info_fd *fi = find_socket_info_fd(fd);
 
 	if (fi == NULL) {
+		return -1;
+	}
+
+	return fi->si_index;
+}
+
+static struct socket_info *find_socket_info(int fd)
+{
+	int idx = find_socket_info_index(fd);
+
+	if (idx == -1) {
 		return NULL;
 	}
 
-	return fi->si;
+	return &sockets[idx];
 }
 
 #if 0 /* FIXME */
@@ -1425,7 +1517,7 @@ static bool check_addr_port_in_use(const struct sockaddr *sa, socklen_t len)
 	}
 
 	for (f = socket_fds; f; f = f->next) {
-		struct socket_info *s = f->si;
+		struct socket_info *s = &sockets[f->si_index];
 
 		if (s == last_s) {
 			continue;
@@ -1500,7 +1592,7 @@ static void swrap_remove_stale(int fd)
 		return;
 	}
 
-	si = fi->si;
+	si = &sockets[fi->si_index];
 
 	SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
 	SWRAP_DLIST_REMOVE(socket_fds, fi);
@@ -1515,7 +1607,6 @@ static void swrap_remove_stale(int fd)
 	if (si->un_addr.sun_path[0] != '\0') {
 		unlink(si->un_addr.sun_path);
 	}
-	free(si);
 }
 
 static int sockaddr_convert_to_un(struct socket_info *si,
@@ -2409,6 +2500,7 @@ static int swrap_socket(int family, int type, int protocol)
 	struct socket_info *si;
 	struct socket_info_fd *fi;
 	int fd;
+	int idx;
 	int real_type = type;
 
 	/*
@@ -2487,11 +2579,13 @@ static int swrap_socket(int family, int type, int protocol)
 	/* Check if we have a stale fd and remove it */
 	swrap_remove_stale(fd);
 
-	si = (struct socket_info *)calloc(1, sizeof(struct socket_info));
-	if (si == NULL) {
+	idx = socket_wrapper_first_free_index();
+	if (idx == -1) {
 		errno = ENOMEM;
 		return -1;
 	}
+
+	si = &sockets[idx];
 
 	si->family = family;
 
@@ -2524,21 +2618,19 @@ static int swrap_socket(int family, int type, int protocol)
 		break;
 	}
 	default:
-		free(si);
 		errno = EINVAL;
 		return -1;
 	}
 
 	fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
 	if (fi == NULL) {
-		free(si);
 		errno = ENOMEM;
 		return -1;
 	}
 
 	si->refcount = 1;
 	fi->fd = fd;
-	fi->si = si;
+	fi->si_index = idx;
 
 	SWRAP_DLIST_ADD(socket_fds, fi);
 
@@ -2634,6 +2726,7 @@ static int swrap_accept(int s,
 	struct socket_info *parent_si, *child_si;
 	struct socket_info_fd *child_fi;
 	int fd;
+	int idx;
 	struct swrap_address un_addr = {
 		.sa_socklen = sizeof(struct sockaddr_un),
 	};
@@ -2693,16 +2786,16 @@ static int swrap_accept(int s,
 		return ret;
 	}
 
-	child_si = (struct socket_info *)calloc(1, sizeof(struct socket_info));
-	if (child_si == NULL) {
-		close(fd);
+	idx = socket_wrapper_first_free_index();
+	if (idx == -1) {
 		errno = ENOMEM;
 		return -1;
 	}
 
+	child_si = &sockets[idx];
+
 	child_fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
 	if (child_fi == NULL) {
-		free(child_si);
 		close(fd);
 		errno = ENOMEM;
 		return -1;
@@ -2735,7 +2828,6 @@ static int swrap_accept(int s,
 			       &un_my_addr.sa_socklen);
 	if (ret == -1) {
 		free(child_fi);
-		free(child_si);
 		close(fd);
 		return ret;
 	}
@@ -2748,7 +2840,6 @@ static int swrap_accept(int s,
 				       &in_my_addr.sa_socklen);
 	if (ret == -1) {
 		free(child_fi);
-		free(child_si);
 		close(fd);
 		return ret;
 	}
@@ -2763,7 +2854,7 @@ static int swrap_accept(int s,
 	memcpy(&child_si->myname.sa.ss, &in_my_addr.sa.ss, in_my_addr.sa_socklen);
 
 	child_si->refcount = 1;
-	child_fi->si = child_si;
+	child_fi->si_index = idx;
 
 	SWRAP_DLIST_ADD(socket_fds, child_fi);
 
@@ -5121,7 +5212,7 @@ static int swrap_close(int fd)
 		return libc_close(fd);
 	}
 
-	si = fi->si;
+	si = &sockets[fi->si_index];
 
 	SWRAP_DLIST_REMOVE(socket_fds, fi);
 	free(fi);
@@ -5147,7 +5238,6 @@ static int swrap_close(int fd)
 	if (si->un_addr.sun_path[0] != '\0') {
 		unlink(si->un_addr.sun_path);
 	}
-	free(si);
 
 	return ret;
 }
@@ -5171,7 +5261,7 @@ static int swrap_dup(int fd)
 		return libc_dup(fd);
 	}
 
-	si = src_fi->si;
+	si = &sockets[src_fi->si_index];
 
 	fi = (struct socket_info_fd *)calloc(1, sizeof(struct socket_info_fd));
 	if (fi == NULL) {
@@ -5188,7 +5278,7 @@ static int swrap_dup(int fd)
 	}
 
 	si->refcount++;
-	fi->si = si;
+	fi->si_index = src_fi->si_index;
 
 	/* Make sure we don't have an entry for the fd */
 	swrap_remove_stale(fi->fd);
@@ -5216,7 +5306,7 @@ static int swrap_dup2(int fd, int newfd)
 		return libc_dup2(fd, newfd);
 	}
 
-	si = src_fi->si;
+	si = &sockets[src_fi->si_index];
 
 	if (fd == newfd) {
 		/*
@@ -5249,7 +5339,7 @@ static int swrap_dup2(int fd, int newfd)
 	}
 
 	si->refcount++;
-	fi->si = si;
+	fi->si_index = src_fi->si_index;
 
 	/* Make sure we don't have an entry for the fd */
 	swrap_remove_stale(fi->fd);
@@ -5278,7 +5368,7 @@ static int swrap_vfcntl(int fd, int cmd, va_list va)
 		return libc_vfcntl(fd, cmd, va);
 	}
 
-	si = src_fi->si;
+	si = &sockets[src_fi->si_index];
 
 	switch (cmd) {
 	case F_DUPFD:
@@ -5297,7 +5387,7 @@ static int swrap_vfcntl(int fd, int cmd, va_list va)
 		}
 
 		si->refcount++;
-		fi->si = si;
+		fi->si_index = src_fi->si_index;
 
 		/* Make sure we don't have an entry for the fd */
 		swrap_remove_stale(fi->fd);
@@ -5381,6 +5471,8 @@ void swrap_destructor(void)
 		swrap_close(s->fd);
 		s = socket_fds;
 	}
+
+	free(sockets);
 
 	if (swrap.libc_handle != NULL) {
 		dlclose(swrap.libc_handle);
