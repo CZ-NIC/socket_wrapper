@@ -263,9 +263,13 @@ struct socket_info_fd {
 	int si_index;
 };
 
+int first_free;
+
 struct socket_info
 {
 	unsigned int refcount;
+
+	int next_free;
 
 	int family;
 	int type;
@@ -1030,6 +1034,7 @@ done:
 
 static void socket_wrapper_init_sockets(void)
 {
+	size_t i;
 
 	if (sockets != NULL) {
 		return;
@@ -1045,6 +1050,14 @@ static void socket_wrapper_init_sockets(void)
 			  "Failed to allocate sockets array.\n");
 		exit(-1);
 	}
+
+	first_free = 0;
+
+	for (i = 0; i < max_sockets; i++) {
+		sockets[i].next_free = i+1;
+	}
+
+	sockets[max_sockets-1].next_free = -1;
 }
 
 bool socket_wrapper_enabled(void)
@@ -1075,18 +1088,23 @@ static unsigned int socket_wrapper_default_iface(void)
 	return 1;/* 127.0.0.1 */
 }
 
+/*
+ * Return the first free entry (if any) and make
+ * it re-usable again (by nulling it out)
+ */
 static int socket_wrapper_first_free_index(void)
 {
-	unsigned int i;
+	int next_free;
 
-	for (i = 0; i < max_sockets; ++i) {
-		if (sockets[i].refcount == 0) {
-			ZERO_STRUCT(sockets[i]);
-			return i;
-		}
+	if (first_free == -1) {
+		return -1;
 	}
 
-	return -1;
+	next_free = sockets[first_free].next_free;
+	ZERO_STRUCT(sockets[first_free]);
+	sockets[first_free].next_free = next_free;
+
+	return first_free;
 }
 
 static int convert_un_in(const struct sockaddr_un *un, struct sockaddr *in, socklen_t *len)
@@ -1607,6 +1625,9 @@ static void swrap_remove_stale(int fd)
 	if (si->un_addr.sun_path[0] != '\0') {
 		unlink(si->un_addr.sun_path);
 	}
+
+	si->next_free = first_free;
+	first_free = fi->si_index;
 }
 
 static int sockaddr_convert_to_un(struct socket_info *si,
@@ -2629,6 +2650,9 @@ static int swrap_socket(int family, int type, int protocol)
 	}
 
 	si->refcount = 1;
+	first_free = si->next_free;
+	si->next_free = 0;
+
 	fi->fd = fd;
 	fi->si_index = idx;
 
@@ -2854,6 +2878,9 @@ static int swrap_accept(int s,
 	memcpy(&child_si->myname.sa.ss, &in_my_addr.sa.ss, in_my_addr.sa_socklen);
 
 	child_si->refcount = 1;
+	first_free = child_si->next_free;
+	child_si->next_free = 0;
+
 	child_fi->si_index = idx;
 
 	SWRAP_DLIST_ADD(socket_fds, child_fi);
@@ -5238,6 +5265,9 @@ static int swrap_close(int fd)
 	if (si->un_addr.sun_path[0] != '\0') {
 		unlink(si->un_addr.sun_path);
 	}
+
+	si->next_free = first_free;
+	first_free = fi->si_index;
 
 	return ret;
 }
