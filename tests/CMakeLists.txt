@@ -16,7 +16,8 @@ target_link_libraries(echo_srv ${SWRAP_REQUIRED_LIBRARIES})
 add_library(${TORTURE_LIBRARY} STATIC torture.c)
 target_link_libraries(${TORTURE_LIBRARY}
     ${CMOCKA_LIBRARY}
-    ${SWRAP_REQUIRED_LIBRARIES})
+    ${SWRAP_REQUIRED_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
 
 set(SWRAP_TESTS
     test_ioctl
