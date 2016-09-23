@@ -2309,7 +2309,9 @@ static int swrap_pcap_get_fd(const char *fname)
 {
 	static int fd = -1;
 
-	if (fd != -1) return fd;
+	if (fd != -1) {
+		return fd;
+	}
 
 	fd = libc_open(fname, O_WRONLY|O_CREAT|O_EXCL|O_APPEND, 0644);
 	if (fd != -1) {
@@ -2362,7 +2364,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 
 	switch (type) {
 	case SWRAP_CONNECT_SEND:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		src_addr  = &si->myname.sa.s;
 		dest_addr = addr;
@@ -2376,7 +2380,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_CONNECT_RECV:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		dest_addr = &si->myname.sa.s;
 		src_addr = addr;
@@ -2390,7 +2396,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_CONNECT_UNREACH:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		dest_addr = &si->myname.sa.s;
 		src_addr  = addr;
@@ -2404,7 +2412,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_CONNECT_ACK:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		src_addr  = &si->myname.sa.s;
 		dest_addr = addr;
@@ -2416,7 +2426,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_ACCEPT_SEND:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		dest_addr = &si->myname.sa.s;
 		src_addr = addr;
@@ -2430,7 +2442,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_ACCEPT_RECV:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		src_addr = &si->myname.sa.s;
 		dest_addr = addr;
@@ -2444,7 +2458,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_ACCEPT_ACK:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		dest_addr = &si->myname.sa.s;
 		src_addr = addr;
@@ -2551,7 +2567,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_CLOSE_SEND:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		src_addr  = &si->myname.sa.s;
 		dest_addr = &si->peername.sa.s;
@@ -2565,7 +2583,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_CLOSE_RECV:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		dest_addr = &si->myname.sa.s;
 		src_addr  = &si->peername.sa.s;
@@ -2579,7 +2599,9 @@ static uint8_t *swrap_pcap_marshall_packet(struct socket_info *si,
 		break;
 
 	case SWRAP_CLOSE_ACK:
-		if (si->type != SOCK_STREAM) return NULL;
+		if (si->type != SOCK_STREAM) {
+			return NULL;
+		}
 
 		src_addr  = &si->myname.sa.s;
 		dest_addr = &si->peername.sa.s;
@@ -3173,7 +3195,9 @@ static int swrap_auto_bind(int fd, struct socket_info *si, int family)
 		if (stat(un_addr.sa.un.sun_path, &st) == 0) continue;
 
 		ret = libc_bind(fd, &un_addr.sa.s, un_addr.sa_socklen);
-		if (ret == -1) return ret;
+		if (ret == -1) {
+			return ret;
+		}
 
 		si->un_addr = un_addr.sa.un;
 
@@ -3218,7 +3242,9 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 
 	if (si->bound == 0) {
 		ret = swrap_auto_bind(s, si, serv_addr->sa_family);
-		if (ret == -1) return -1;
+		if (ret == -1) {
+			return -1;
+		}
 	}
 
 	if (si->family != serv_addr->sa_family) {
@@ -3228,7 +3254,9 @@ static int swrap_connect(int s, const struct sockaddr *serv_addr,
 
 	ret = sockaddr_convert_to_un(si, serv_addr,
 				     addrlen, &un_addr.sa.un, 0, &bcast);
-	if (ret == -1) return -1;
+	if (ret == -1) {
+		return -1;
+	}
 
 	if (bcast) {
 		errno = ENETUNREACH;
@@ -3387,7 +3415,9 @@ static int swrap_bind(int s, const struct sockaddr *myaddr, socklen_t addrlen)
 				     &un_addr.sa.un,
 				     1,
 				     &si->bcast);
-	if (ret == -1) return -1;
+	if (ret == -1) {
+		return -1;
+	}
 
 	unlink(un_addr.sa.un.sun_path);
 
@@ -4281,7 +4311,9 @@ static ssize_t swrap_sendmsg_before(int fd,
 
 			ret = sockaddr_convert_to_un(si, msg_name, msg->msg_namelen,
 						     tmp_un, 0, bcast);
-			if (ret == -1) return -1;
+			if (ret == -1) {
+				return -1;
+			}
 
 			if (to_un) {
 				*to_un = tmp_un;
@@ -4316,7 +4348,9 @@ static ssize_t swrap_sendmsg_before(int fd,
 					     tmp_un,
 					     0,
 					     NULL);
-		if (ret == -1) return -1;
+		if (ret == -1) {
+			return -1;
+		}
 
 		ret = libc_connect(fd,
 				   (struct sockaddr *)(void *)tmp_un,
