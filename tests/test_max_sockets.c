@@ -1,24 +1,10 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-
-#include "config.h"
 #include "torture.h"
 
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <cmocka.h>
 #include <unistd.h>
-#ifdef HAVE_RPC_RPC_H
-#include <rpc/rpc.h>
-#endif
-
+#include <stdlib.h>
 
 #define MAX_SOCKETS 4
 
@@ -52,13 +38,11 @@ static int _socket(int *_s)
 
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	if (_s != NULL) {
-		*_s = s;
-	}
-
 	if (s < 0) {
 		return -1;
 	}
+
+	*_s = s;
 
 	return 0;
 }
