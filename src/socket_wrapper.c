@@ -95,6 +95,12 @@ enum swrap_dbglvl_e {
 #define PRINTF_ATTRIBUTE(a,b)
 #endif /* HAVE_FUNCTION_ATTRIBUTE_FORMAT */
 
+#ifdef HAVE_CONSTRUCTOR_ATTRIBUTE
+#define CONSTRUCTOR_ATTRIBUTE __attribute__ ((constructor))
+#else
+#define CONSTRUCTOR_ATTRIBUTE
+#endif /* HAVE_CONSTRUCTOR_ATTRIBUTE */
+
 #ifdef HAVE_DESTRUCTOR_ATTRIBUTE
 #define DESTRUCTOR_ATTRIBUTE __attribute__ ((destructor))
 #else

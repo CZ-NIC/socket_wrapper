@@ -172,6 +172,18 @@ int main(void) {
 }" HAVE_SOCKADDR_STORAGE)
 
 check_c_source_compiles("
+void test_constructor_attribute(void) __attribute__ ((constructor));
+
+void test_constructor_attribute(void)
+{
+    return;
+}
+
+int main(void) {
+    return 0;
+}" HAVE_CONSTRUCTOR_ATTRIBUTE)
+
+check_c_source_compiles("
 void test_destructor_attribute(void) __attribute__ ((destructor));
 
 void test_destructor_attribute(void)

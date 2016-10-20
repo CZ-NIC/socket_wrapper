@@ -58,6 +58,7 @@
 /**************************** OPTIONS ****************************/
 
 #cmakedefine HAVE_GCC_THREAD_LOCAL_STORAGE 1
+#cmakedefine HAVE_CONSTRUCTOR_ATTRIBUTE 1
 #cmakedefine HAVE_DESTRUCTOR_ATTRIBUTE 1
 #cmakedefine HAVE_ADDRESS_SANITIZER_ATTRIBUTE 1
 #cmakedefine HAVE_SOCKADDR_STORAGE 1
