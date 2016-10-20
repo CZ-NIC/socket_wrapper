@@ -79,6 +79,7 @@
 #ifdef HAVE_RPC_RPC_H
 #include <rpc/rpc.h>
 #endif
+#include <pthread.h>
 
 enum swrap_dbglvl_e {
 	SWRAP_LOG_ERROR = 0,
@@ -151,6 +152,15 @@ enum swrap_dbglvl_e {
 #  define IP_PKTINFO IP_RECVDSTADDR
 # endif
 #endif
+
+/* Macros for accessing mutexes */
+# define SWRAP_LOCK(m) do { \
+	pthread_mutex_lock(&(m ## _mutex)); \
+} while(0)
+
+# define SWRAP_UNLOCK(m) do { \
+	pthread_mutex_unlock(&(m ## _mutex)); \
+} while(0)
 
 
 #define SWRAP_DLIST_ADD(list,item) do { \
@@ -304,6 +314,9 @@ static size_t max_sockets = 0;
  * process rather than including it within socket_info which will be shared.
  */
 static struct socket_info_fd *socket_fds;
+
+/* The mutex for accessing the global libc.symbols */
+static pthread_mutex_t libc_symbol_binding_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Function prototypes */
 
@@ -623,22 +636,28 @@ static void *_swrap_bind_symbol(enum swrap_lib lib, const char *fn_name)
 }
 
 #define swrap_bind_symbol_libc(sym_name) \
+	SWRAP_LOCK(libc_symbol_binding); \
 	if (swrap.libc.symbols._libc_##sym_name.obj == NULL) { \
 		swrap.libc.symbols._libc_##sym_name.obj = \
 			_swrap_bind_symbol(SWRAP_LIBC, #sym_name); \
-	}
+	} \
+	SWRAP_UNLOCK(libc_symbol_binding)
 
 #define swrap_bind_symbol_libsocket(sym_name) \
+	SWRAP_LOCK(libc_symbol_binding); \
 	if (swrap.libc.symbols._libc_##sym_name.obj == NULL) { \
 		swrap.libc.symbols._libc_##sym_name.obj = \
 			_swrap_bind_symbol(SWRAP_LIBSOCKET, #sym_name); \
-	}
+	} \
+	SWRAP_UNLOCK(libc_symbol_binding)
 
 #define swrap_bind_symbol_libnsl(sym_name) \
+	SWRAP_LOCK(libc_symbol_binding); \
 	if (swrap.libc.symbols._libc_##sym_name.obj == NULL) { \
 		swrap.libc.symbols._libc_##sym_name.obj = \
 			_swrap_bind_symbol(SWRAP_LIBNSL, #sym_name); \
-	}
+	} \
+	SWRAP_UNLOCK(libc_symbol_binding)
 
 /*
  * IMPORTANT
