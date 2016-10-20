@@ -368,86 +368,133 @@ static void swrap_log(enum swrap_dbglvl_e dbglvl,
 
 #include <dlfcn.h>
 
-struct swrap_libc_fns {
 #ifdef HAVE_ACCEPT4
-	int (*libc_accept4)(int sockfd,
-			   struct sockaddr *addr,
-			   socklen_t *addrlen,
-			   int flags);
+typedef int (*__libc_accept4)(int sockfd,
+			      struct sockaddr *addr,
+			      socklen_t *addrlen,
+			      int flags);
 #else
-	int (*libc_accept)(int sockfd,
-			   struct sockaddr *addr,
-			   socklen_t *addrlen);
+typedef int (*__libc_accept)(int sockfd,
+			     struct sockaddr *addr,
+			     socklen_t *addrlen);
 #endif
-	int (*libc_bind)(int sockfd,
-			 const struct sockaddr *addr,
-			 socklen_t addrlen);
-	int (*libc_close)(int fd);
-	int (*libc_connect)(int sockfd,
-			    const struct sockaddr *addr,
-			    socklen_t addrlen);
-	int (*libc_dup)(int fd);
-	int (*libc_dup2)(int oldfd, int newfd);
-	int (*libc_fcntl)(int fd, int cmd, ...);
-	FILE *(*libc_fopen)(const char *name, const char *mode);
+typedef int (*__libc_bind)(int sockfd,
+			   const struct sockaddr *addr,
+			   socklen_t addrlen);
+typedef int (*__libc_close)(int fd);
+typedef int (*__libc_connect)(int sockfd,
+			      const struct sockaddr *addr,
+			      socklen_t addrlen);
+typedef int (*__libc_dup)(int fd);
+typedef int (*__libc_dup2)(int oldfd, int newfd);
+typedef int (*__libc_fcntl)(int fd, int cmd, ...);
+typedef FILE *(*__libc_fopen)(const char *name, const char *mode);
 #ifdef HAVE_EVENTFD
-	int (*libc_eventfd)(int count, int flags);
+typedef int (*__libc_eventfd)(int count, int flags);
 #endif
-	int (*libc_getpeername)(int sockfd,
-				struct sockaddr *addr,
-				socklen_t *addrlen);
-	int (*libc_getsockname)(int sockfd,
-				struct sockaddr *addr,
-				socklen_t *addrlen);
-	int (*libc_getsockopt)(int sockfd,
+typedef int (*__libc_getpeername)(int sockfd,
+				  struct sockaddr *addr,
+				  socklen_t *addrlen);
+typedef int (*__libc_getsockname)(int sockfd,
+				  struct sockaddr *addr,
+				  socklen_t *addrlen);
+typedef int (*__libc_getsockopt)(int sockfd,
 			       int level,
 			       int optname,
 			       void *optval,
 			       socklen_t *optlen);
-	int (*libc_ioctl)(int d, unsigned long int request, ...);
-	int (*libc_listen)(int sockfd, int backlog);
-	int (*libc_open)(const char *pathname, int flags, mode_t mode);
-	int (*libc_pipe)(int pipefd[2]);
-	int (*libc_read)(int fd, void *buf, size_t count);
-	ssize_t (*libc_readv)(int fd, const struct iovec *iov, int iovcnt);
-	int (*libc_recv)(int sockfd, void *buf, size_t len, int flags);
-	int (*libc_recvfrom)(int sockfd,
+typedef int (*__libc_ioctl)(int d, unsigned long int request, ...);
+typedef int (*__libc_listen)(int sockfd, int backlog);
+typedef int (*__libc_open)(const char *pathname, int flags, mode_t mode);
+typedef int (*__libc_pipe)(int pipefd[2]);
+typedef int (*__libc_read)(int fd, void *buf, size_t count);
+typedef ssize_t (*__libc_readv)(int fd, const struct iovec *iov, int iovcnt);
+typedef int (*__libc_recv)(int sockfd, void *buf, size_t len, int flags);
+typedef int (*__libc_recvfrom)(int sockfd,
 			     void *buf,
 			     size_t len,
 			     int flags,
 			     struct sockaddr *src_addr,
 			     socklen_t *addrlen);
-	int (*libc_recvmsg)(int sockfd, const struct msghdr *msg, int flags);
-	int (*libc_send)(int sockfd, const void *buf, size_t len, int flags);
-	int (*libc_sendmsg)(int sockfd, const struct msghdr *msg, int flags);
-	int (*libc_sendto)(int sockfd,
+typedef int (*__libc_recvmsg)(int sockfd, const struct msghdr *msg, int flags);
+typedef int (*__libc_send)(int sockfd, const void *buf, size_t len, int flags);
+typedef int (*__libc_sendmsg)(int sockfd, const struct msghdr *msg, int flags);
+typedef int (*__libc_sendto)(int sockfd,
 			   const void *buf,
 			   size_t len,
 			   int flags,
 			   const  struct sockaddr *dst_addr,
 			   socklen_t addrlen);
-	int (*libc_setsockopt)(int sockfd,
+typedef int (*__libc_setsockopt)(int sockfd,
 			       int level,
 			       int optname,
 			       const void *optval,
 			       socklen_t optlen);
 #ifdef HAVE_SIGNALFD
-	int (*libc_signalfd)(int fd, const sigset_t *mask, int flags);
+typedef int (*__libc_signalfd)(int fd, const sigset_t *mask, int flags);
 #endif
-	int (*libc_socket)(int domain, int type, int protocol);
-	int (*libc_socketpair)(int domain, int type, int protocol, int sv[2]);
+typedef int (*__libc_socket)(int domain, int type, int protocol);
+typedef int (*__libc_socketpair)(int domain, int type, int protocol, int sv[2]);
 #ifdef HAVE_TIMERFD_CREATE
-	int (*libc_timerfd_create)(int clockid, int flags);
+typedef int (*__libc_timerfd_create)(int clockid, int flags);
 #endif
-	ssize_t (*libc_write)(int fd, const void *buf, size_t count);
-	ssize_t (*libc_writev)(int fd, const struct iovec *iov, int iovcnt);
+typedef ssize_t (*__libc_write)(int fd, const void *buf, size_t count);
+typedef ssize_t (*__libc_writev)(int fd, const struct iovec *iov, int iovcnt);
+
+#define SWRAP_SYMBOL_ENTRY(i) \
+	union { \
+		__libc_##i f; \
+		void *obj; \
+	} _libc_##i
+
+struct swrap_libc_symbols {
+#ifdef HAVE_ACCEPT4
+	SWRAP_SYMBOL_ENTRY(accept4);
+#else
+	SWRAP_SYMBOL_ENTRY(accept);
+#endif
+	SWRAP_SYMBOL_ENTRY(bind);
+	SWRAP_SYMBOL_ENTRY(close);
+	SWRAP_SYMBOL_ENTRY(connect);
+	SWRAP_SYMBOL_ENTRY(dup);
+	SWRAP_SYMBOL_ENTRY(dup2);
+	SWRAP_SYMBOL_ENTRY(fcntl);
+	SWRAP_SYMBOL_ENTRY(fopen);
+#ifdef HAVE_EVENTFD
+	SWRAP_SYMBOL_ENTRY(eventfd);
+#endif
+	SWRAP_SYMBOL_ENTRY(getpeername);
+	SWRAP_SYMBOL_ENTRY(getsockname);
+	SWRAP_SYMBOL_ENTRY(getsockopt);
+	SWRAP_SYMBOL_ENTRY(ioctl);
+	SWRAP_SYMBOL_ENTRY(listen);
+	SWRAP_SYMBOL_ENTRY(open);
+	SWRAP_SYMBOL_ENTRY(pipe);
+	SWRAP_SYMBOL_ENTRY(read);
+	SWRAP_SYMBOL_ENTRY(readv);
+	SWRAP_SYMBOL_ENTRY(recv);
+	SWRAP_SYMBOL_ENTRY(recvfrom);
+	SWRAP_SYMBOL_ENTRY(recvmsg);
+	SWRAP_SYMBOL_ENTRY(send);
+	SWRAP_SYMBOL_ENTRY(sendmsg);
+	SWRAP_SYMBOL_ENTRY(sendto);
+	SWRAP_SYMBOL_ENTRY(setsockopt);
+#ifdef HAVE_SIGNALFD
+	SWRAP_SYMBOL_ENTRY(signalfd);
+#endif
+	SWRAP_SYMBOL_ENTRY(socket);
+	SWRAP_SYMBOL_ENTRY(socketpair);
+	SWRAP_SYMBOL_ENTRY(timerfd_create);
+	SWRAP_SYMBOL_ENTRY(write);
+	SWRAP_SYMBOL_ENTRY(writev);
 };
 
 struct swrap {
-	void *libc_handle;
-	void *libsocket_handle;
-
-	struct swrap_libc_fns fns;
+	struct {
+		void *handle;
+		void *socket_handle;
+		struct swrap_libc_symbols symbols;
+	} libc;
 };
 
 static struct swrap swrap;
@@ -507,18 +554,18 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 				}
 			}
 
-			swrap.libsocket_handle = handle;
+			swrap.libc.socket_handle = handle;
 		}
 		break;
 #endif
 		/* FALL TROUGH */
 	case SWRAP_LIBC:
-		handle = swrap.libc_handle;
+		handle = swrap.libc.handle;
 #ifdef LIBC_SO
 		if (handle == NULL) {
 			handle = dlopen(LIBC_SO, flags);
 
-			swrap.libc_handle = handle;
+			swrap.libc.handle = handle;
 		}
 #endif
 		if (handle == NULL) {
@@ -532,14 +579,14 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 				}
 			}
 
-			swrap.libc_handle = handle;
+			swrap.libc.handle = handle;
 		}
 		break;
 	}
 
 	if (handle == NULL) {
 #ifdef RTLD_NEXT
-		handle = swrap.libc_handle = swrap.libsocket_handle = RTLD_NEXT;
+		handle = swrap.libc.handle = swrap.libc.socket_handle = RTLD_NEXT;
 #else
 		SWRAP_LOG(SWRAP_LOG_ERROR,
 			  "Failed to dlopen library: %s\n",
@@ -551,7 +598,7 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 	return handle;
 }
 
-static void *_swrap_load_lib_function(enum swrap_lib lib, const char *fn_name)
+static void *_swrap_bind_symbol(enum swrap_lib lib, const char *fn_name)
 {
 	void *handle;
 	void *func;
@@ -561,24 +608,37 @@ static void *_swrap_load_lib_function(enum swrap_lib lib, const char *fn_name)
 	func = dlsym(handle, fn_name);
 	if (func == NULL) {
 		SWRAP_LOG(SWRAP_LOG_ERROR,
-				"Failed to find %s: %s\n",
-				fn_name, dlerror());
+			  "Failed to find %s: %s\n",
+			  fn_name,
+			  dlerror());
 		exit(-1);
 	}
 
 	SWRAP_LOG(SWRAP_LOG_TRACE,
-			"Loaded %s from %s",
-			fn_name, swrap_str_lib(lib));
+		  "Loaded %s from %s",
+		  fn_name,
+		  swrap_str_lib(lib));
+
 	return func;
 }
 
-#define swrap_load_lib_function(lib, fn_name) \
-	if (swrap.fns.libc_##fn_name == NULL) { \
-		void *swrap_cast_ptr = _swrap_load_lib_function(lib, #fn_name); \
-		*(void **) (&swrap.fns.libc_##fn_name) = \
-			swrap_cast_ptr; \
+#define swrap_bind_symbol_libc(sym_name) \
+	if (swrap.libc.symbols._libc_##sym_name.obj == NULL) { \
+		swrap.libc.symbols._libc_##sym_name.obj = \
+			_swrap_bind_symbol(SWRAP_LIBC, #sym_name); \
 	}
 
+#define swrap_bind_symbol_libsocket(sym_name) \
+	if (swrap.libc.symbols._libc_##sym_name.obj == NULL) { \
+		swrap.libc.symbols._libc_##sym_name.obj = \
+			_swrap_bind_symbol(SWRAP_LIBSOCKET, #sym_name); \
+	}
+
+#define swrap_bind_symbol_libnsl(sym_name) \
+	if (swrap.libc.symbols._libc_##sym_name.obj == NULL) { \
+		swrap.libc.symbols._libc_##sym_name.obj = \
+			_swrap_bind_symbol(SWRAP_LIBNSL, #sym_name); \
+	}
 
 /*
  * IMPORTANT
@@ -594,18 +654,18 @@ static int libc_accept4(int sockfd,
 			socklen_t *addrlen,
 			int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, accept4);
+	swrap_bind_symbol_libsocket(accept4);
 
-	return swrap.fns.libc_accept4(sockfd, addr, addrlen, flags);
+	return swrap.libc.symbols._libc_accept4.f(sockfd, addr, addrlen, flags);
 }
 
 #else /* HAVE_ACCEPT4 */
 
 static int libc_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, accept);
+	swrap_bind_symbol_libsocket(accept);
 
-	return swrap.fns.libc_accept(sockfd, addr, addrlen);
+	return swrap.libc.symbols._libc_accept.f(sockfd, addr, addrlen);
 }
 #endif /* HAVE_ACCEPT4 */
 
@@ -613,47 +673,47 @@ static int libc_bind(int sockfd,
 		     const struct sockaddr *addr,
 		     socklen_t addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, bind);
+	swrap_bind_symbol_libsocket(bind);
 
-	return swrap.fns.libc_bind(sockfd, addr, addrlen);
+	return swrap.libc.symbols._libc_bind.f(sockfd, addr, addrlen);
 }
 
 static int libc_close(int fd)
 {
-	swrap_load_lib_function(SWRAP_LIBC, close);
+	swrap_bind_symbol_libc(close);
 
-	return swrap.fns.libc_close(fd);
+	return swrap.libc.symbols._libc_close.f(fd);
 }
 
 static int libc_connect(int sockfd,
 			const struct sockaddr *addr,
 			socklen_t addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, connect);
+	swrap_bind_symbol_libsocket(connect);
 
-	return swrap.fns.libc_connect(sockfd, addr, addrlen);
+	return swrap.libc.symbols._libc_connect.f(sockfd, addr, addrlen);
 }
 
 static int libc_dup(int fd)
 {
-	swrap_load_lib_function(SWRAP_LIBC, dup);
+	swrap_bind_symbol_libc(dup);
 
-	return swrap.fns.libc_dup(fd);
+	return swrap.libc.symbols._libc_dup.f(fd);
 }
 
 static int libc_dup2(int oldfd, int newfd)
 {
-	swrap_load_lib_function(SWRAP_LIBC, dup2);
+	swrap_bind_symbol_libc(dup2);
 
-	return swrap.fns.libc_dup2(oldfd, newfd);
+	return swrap.libc.symbols._libc_dup2.f(oldfd, newfd);
 }
 
 #ifdef HAVE_EVENTFD
 static int libc_eventfd(int count, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBC, eventfd);
+	swrap_bind_symbol_libc(eventfd);
 
-	return swrap.fns.libc_eventfd(count, flags);
+	return swrap.libc.symbols._libc_eventfd.f(count, flags);
 }
 #endif
 
@@ -664,18 +724,18 @@ static int libc_vfcntl(int fd, int cmd, va_list ap)
 	int rc;
 	int i;
 
-	swrap_load_lib_function(SWRAP_LIBC, fcntl);
+	swrap_bind_symbol_libc(fcntl);
 
 	for (i = 0; i < 4; i++) {
 		args[i] = va_arg(ap, long int);
 	}
 
-	rc = swrap.fns.libc_fcntl(fd,
-				  cmd,
-				  args[0],
-				  args[1],
-				  args[2],
-				  args[3]);
+	rc = swrap.libc.symbols._libc_fcntl.f(fd,
+					      cmd,
+					      args[0],
+					      args[1],
+					      args[2],
+					      args[3]);
 
 	return rc;
 }
@@ -684,18 +744,18 @@ static int libc_getpeername(int sockfd,
 			    struct sockaddr *addr,
 			    socklen_t *addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, getpeername);
+	swrap_bind_symbol_libsocket(getpeername);
 
-	return swrap.fns.libc_getpeername(sockfd, addr, addrlen);
+	return swrap.libc.symbols._libc_getpeername.f(sockfd, addr, addrlen);
 }
 
 static int libc_getsockname(int sockfd,
 			    struct sockaddr *addr,
 			    socklen_t *addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, getsockname);
+	swrap_bind_symbol_libsocket(getsockname);
 
-	return swrap.fns.libc_getsockname(sockfd, addr, addrlen);
+	return swrap.libc.symbols._libc_getsockname.f(sockfd, addr, addrlen);
 }
 
 static int libc_getsockopt(int sockfd,
@@ -704,9 +764,13 @@ static int libc_getsockopt(int sockfd,
 			   void *optval,
 			   socklen_t *optlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, getsockopt);
+	swrap_bind_symbol_libsocket(getsockopt);
 
-	return swrap.fns.libc_getsockopt(sockfd, level, optname, optval, optlen);
+	return swrap.libc.symbols._libc_getsockopt.f(sockfd,
+						     level,
+						     optname,
+						     optval,
+						     optlen);
 }
 
 DO_NOT_SANITIZE_ADDRESS_ATTRIBUTE
@@ -716,34 +780,34 @@ static int libc_vioctl(int d, unsigned long int request, va_list ap)
 	int rc;
 	int i;
 
-	swrap_load_lib_function(SWRAP_LIBC, ioctl);
+	swrap_bind_symbol_libc(ioctl);
 
 	for (i = 0; i < 4; i++) {
 		args[i] = va_arg(ap, long int);
 	}
 
-	rc = swrap.fns.libc_ioctl(d,
-				  request,
-				  args[0],
-				  args[1],
-				  args[2],
-				  args[3]);
+	rc = swrap.libc.symbols._libc_ioctl.f(d,
+					      request,
+					      args[0],
+					      args[1],
+					      args[2],
+					      args[3]);
 
 	return rc;
 }
 
 static int libc_listen(int sockfd, int backlog)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, listen);
+	swrap_bind_symbol_libsocket(listen);
 
-	return swrap.fns.libc_listen(sockfd, backlog);
+	return swrap.libc.symbols._libc_listen.f(sockfd, backlog);
 }
 
 static FILE *libc_fopen(const char *name, const char *mode)
 {
-	swrap_load_lib_function(SWRAP_LIBC, fopen);
+	swrap_bind_symbol_libc(fopen);
 
-	return swrap.fns.libc_fopen(name, mode);
+	return swrap.libc.symbols._libc_fopen.f(name, mode);
 }
 
 static int libc_vopen(const char *pathname, int flags, va_list ap)
@@ -751,11 +815,11 @@ static int libc_vopen(const char *pathname, int flags, va_list ap)
 	long int mode = 0;
 	int fd;
 
-	swrap_load_lib_function(SWRAP_LIBC, open);
+	swrap_bind_symbol_libc(open);
 
 	mode = va_arg(ap, long int);
 
-	fd = swrap.fns.libc_open(pathname, flags, (mode_t)mode);
+	fd = swrap.libc.symbols._libc_open.f(pathname, flags, (mode_t)mode);
 
 	return fd;
 }
@@ -774,30 +838,30 @@ static int libc_open(const char *pathname, int flags, ...)
 
 static int libc_pipe(int pipefd[2])
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, pipe);
+	swrap_bind_symbol_libsocket(pipe);
 
-	return swrap.fns.libc_pipe(pipefd);
+	return swrap.libc.symbols._libc_pipe.f(pipefd);
 }
 
 static int libc_read(int fd, void *buf, size_t count)
 {
-	swrap_load_lib_function(SWRAP_LIBC, read);
+	swrap_bind_symbol_libc(read);
 
-	return swrap.fns.libc_read(fd, buf, count);
+	return swrap.libc.symbols._libc_read.f(fd, buf, count);
 }
 
 static ssize_t libc_readv(int fd, const struct iovec *iov, int iovcnt)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, readv);
+	swrap_bind_symbol_libsocket(readv);
 
-	return swrap.fns.libc_readv(fd, iov, iovcnt);
+	return swrap.libc.symbols._libc_readv.f(fd, iov, iovcnt);
 }
 
 static int libc_recv(int sockfd, void *buf, size_t len, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, recv);
+	swrap_bind_symbol_libsocket(recv);
 
-	return swrap.fns.libc_recv(sockfd, buf, len, flags);
+	return swrap.libc.symbols._libc_recv.f(sockfd, buf, len, flags);
 }
 
 static int libc_recvfrom(int sockfd,
@@ -807,30 +871,35 @@ static int libc_recvfrom(int sockfd,
 			 struct sockaddr *src_addr,
 			 socklen_t *addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, recvfrom);
+	swrap_bind_symbol_libsocket(recvfrom);
 
-	return swrap.fns.libc_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+	return swrap.libc.symbols._libc_recvfrom.f(sockfd,
+						   buf,
+						   len,
+						   flags,
+						   src_addr,
+						   addrlen);
 }
 
 static int libc_recvmsg(int sockfd, struct msghdr *msg, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, recvmsg);
+	swrap_bind_symbol_libsocket(recvmsg);
 
-	return swrap.fns.libc_recvmsg(sockfd, msg, flags);
+	return swrap.libc.symbols._libc_recvmsg.f(sockfd, msg, flags);
 }
 
 static int libc_send(int sockfd, const void *buf, size_t len, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, send);
+	swrap_bind_symbol_libsocket(send);
 
-	return swrap.fns.libc_send(sockfd, buf, len, flags);
+	return swrap.libc.symbols._libc_send.f(sockfd, buf, len, flags);
 }
 
 static int libc_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, sendmsg);
+	swrap_bind_symbol_libsocket(sendmsg);
 
-	return swrap.fns.libc_sendmsg(sockfd, msg, flags);
+	return swrap.libc.symbols._libc_sendmsg.f(sockfd, msg, flags);
 }
 
 static int libc_sendto(int sockfd,
@@ -840,9 +909,14 @@ static int libc_sendto(int sockfd,
 		       const  struct sockaddr *dst_addr,
 		       socklen_t addrlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, sendto);
+	swrap_bind_symbol_libsocket(sendto);
 
-	return swrap.fns.libc_sendto(sockfd, buf, len, flags, dst_addr, addrlen);
+	return swrap.libc.symbols._libc_sendto.f(sockfd,
+						 buf,
+						 len,
+						 flags,
+						 dst_addr,
+						 addrlen);
 }
 
 static int libc_setsockopt(int sockfd,
@@ -851,55 +925,59 @@ static int libc_setsockopt(int sockfd,
 			   const void *optval,
 			   socklen_t optlen)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, setsockopt);
+	swrap_bind_symbol_libsocket(setsockopt);
 
-	return swrap.fns.libc_setsockopt(sockfd, level, optname, optval, optlen);
+	return swrap.libc.symbols._libc_setsockopt.f(sockfd,
+						     level,
+						     optname,
+						     optval,
+						     optlen);
 }
 
 #ifdef HAVE_SIGNALFD
 static int libc_signalfd(int fd, const sigset_t *mask, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, signalfd);
+	swrap_bind_symbol_libsocket(signalfd);
 
-	return swrap.fns.libc_signalfd(fd, mask, flags);
+	return swrap.libc.symbols._libc_signalfd.f(fd, mask, flags);
 }
 #endif
 
 static int libc_socket(int domain, int type, int protocol)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, socket);
+	swrap_bind_symbol_libsocket(socket);
 
-	return swrap.fns.libc_socket(domain, type, protocol);
+	return swrap.libc.symbols._libc_socket.f(domain, type, protocol);
 }
 
 static int libc_socketpair(int domain, int type, int protocol, int sv[2])
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, socketpair);
+	swrap_bind_symbol_libsocket(socketpair);
 
-	return swrap.fns.libc_socketpair(domain, type, protocol, sv);
+	return swrap.libc.symbols._libc_socketpair.f(domain, type, protocol, sv);
 }
 
 #ifdef HAVE_TIMERFD_CREATE
 static int libc_timerfd_create(int clockid, int flags)
 {
-	swrap_load_lib_function(SWRAP_LIBC, timerfd_create);
+	swrap_bind_symbol_libc(timerfd_create);
 
-	return swrap.fns.libc_timerfd_create(clockid, flags);
+	return swrap.libc.symbols._libc_timerfd_create.f(clockid, flags);
 }
 #endif
 
 static ssize_t libc_write(int fd, const void *buf, size_t count)
 {
-	swrap_load_lib_function(SWRAP_LIBC, write);
+	swrap_bind_symbol_libc(write);
 
-	return swrap.fns.libc_write(fd, buf, count);
+	return swrap.libc.symbols._libc_write.f(fd, buf, count);
 }
 
 static ssize_t libc_writev(int fd, const struct iovec *iov, int iovcnt)
 {
-	swrap_load_lib_function(SWRAP_LIBSOCKET, writev);
+	swrap_bind_symbol_libsocket(writev);
 
-	return swrap.fns.libc_writev(fd, iov, iovcnt);
+	return swrap.libc.symbols._libc_writev.f(fd, iov, iovcnt);
 }
 
 /*********************************************************
@@ -5504,10 +5582,10 @@ void swrap_destructor(void)
 
 	free(sockets);
 
-	if (swrap.libc_handle != NULL) {
-		dlclose(swrap.libc_handle);
+	if (swrap.libc.handle != NULL) {
+		dlclose(swrap.libc.handle);
 	}
-	if (swrap.libsocket_handle) {
-		dlclose(swrap.libsocket_handle);
+	if (swrap.libc.socket_handle) {
+		dlclose(swrap.libc.socket_handle);
 	}
 }
