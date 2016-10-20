@@ -168,6 +168,13 @@ enum swrap_dbglvl_e {
 	pthread_mutex_unlock(&(m ## _mutex)); \
 } while(0)
 
+/* Add new global locks here please */
+# define SWRAP_LOCK_ALL \
+	SWRAP_LOCK(libc_symbol_binding); \
+
+# define SWRAP_UNLOCK_ALL \
+	SWRAP_UNLOCK(libc_symbol_binding); \
+
 
 #define SWRAP_DLIST_ADD(list,item) do { \
 	if (!(list)) { \
@@ -327,6 +334,8 @@ static pthread_mutex_t libc_symbol_binding_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* Function prototypes */
 
 bool socket_wrapper_enabled(void);
+
+void swrap_constructor(void) CONSTRUCTOR_ATTRIBUTE;
 void swrap_destructor(void) DESTRUCTOR_ATTRIBUTE;
 
 #ifdef NDEBUG
@@ -5588,6 +5597,36 @@ int pledge(const char *promises, const char *paths[])
 }
 #endif /* HAVE_PLEDGE */
 
+static void swrap_thread_prepare(void)
+{
+	SWRAP_LOCK_ALL;
+}
+
+static void swrap_thread_parent(void)
+{
+	SWRAP_UNLOCK_ALL;
+}
+
+static void swrap_thread_child(void)
+{
+	SWRAP_UNLOCK_ALL;
+}
+
+/****************************
+ * CONSTRUCTOR
+ ***************************/
+void swrap_constructor(void)
+{
+	/*
+	* If we hold a lock and the application forks, then the child
+	* is not able to unlock the mutex and we are in a deadlock.
+	* This should prevent such deadlocks.
+	*/
+	pthread_atfork(&swrap_thread_prepare,
+		       &swrap_thread_parent,
+		       &swrap_thread_child);
+}
+
 /****************************
  * DESTRUCTOR
  ***************************/
@@ -5599,6 +5638,8 @@ int pledge(const char *promises, const char *paths[])
 void swrap_destructor(void)
 {
 	struct socket_info_fd *s = socket_fds;
+
+	SWRAP_LOCK_ALL;
 
 	while (s != NULL) {
 		swrap_close(s->fd);
@@ -5613,4 +5654,6 @@ void swrap_destructor(void)
 	if (swrap.libc.socket_handle) {
 		dlclose(swrap.libc.socket_handle);
 	}
+
+	SWRAP_UNLOCK_ALL;
 }
