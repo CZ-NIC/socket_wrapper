@@ -512,7 +512,9 @@ struct swrap_libc_symbols {
 #endif
 	SWRAP_SYMBOL_ENTRY(socket);
 	SWRAP_SYMBOL_ENTRY(socketpair);
+#ifdef HAVE_TIMERFD_CREATE
 	SWRAP_SYMBOL_ENTRY(timerfd_create);
+#endif
 	SWRAP_SYMBOL_ENTRY(write);
 	SWRAP_SYMBOL_ENTRY(writev);
 };
