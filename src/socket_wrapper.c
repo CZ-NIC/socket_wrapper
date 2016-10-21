@@ -142,6 +142,8 @@ enum swrap_dbglvl_e {
 #define discard_const_p(type, ptr) ((type *)discard_const(ptr))
 #endif
 
+#define UNUSED(x) (void)(x)
+
 #ifdef IPV6_PKTINFO
 # ifndef IPV6_RECVPKTINFO
 #  define IPV6_RECVPKTINFO IPV6_PKTINFO
@@ -2884,6 +2886,7 @@ static int swrap_accept(int s,
 #ifdef HAVE_ACCEPT4
 		return libc_accept4(s, addr, addrlen, flags);
 #else
+		UNUSED(flags);
 		return libc_accept(s, addr, addrlen);
 #endif
 	}
@@ -2901,6 +2904,7 @@ static int swrap_accept(int s,
 #ifdef HAVE_ACCEPT4
 	ret = libc_accept4(s, &un_addr.sa.s, &un_addr.sa_socklen, flags);
 #else
+	UNUSED(flags);
 	ret = libc_accept(s, &un_addr.sa.s, &un_addr.sa_socklen);
 #endif
 	if (ret == -1) {
