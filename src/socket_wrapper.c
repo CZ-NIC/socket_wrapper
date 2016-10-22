@@ -574,7 +574,7 @@ static void *swrap_load_lib_handle(enum swrap_lib lib)
 		/* FALL TROUGH */
 	case SWRAP_LIBSOCKET:
 #ifdef HAVE_LIBSOCKET
-		handle = swrap.libsocket_handle;
+		handle = swrap.libc.socket_handle;
 		if (handle == NULL) {
 			for (i = 10; i >= 0; i--) {
 				char soname[256] = {0};
