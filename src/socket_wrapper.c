@@ -5351,17 +5351,19 @@ static int swrap_close(int fd)
 {
 	struct socket_info_fd *fi = find_socket_info_fd(fd);
 	struct socket_info *si = NULL;
+	int si_index;
 	int ret;
 
 	if (fi == NULL) {
 		return libc_close(fd);
 	}
 
-	si = &sockets[fi->si_index];
+	si_index = fi->si_index;
 
 	SWRAP_DLIST_REMOVE(socket_fds, fi);
 	free(fi);
 
+	si = &sockets[si_index];
 	si->refcount--;
 
 	if (si->refcount > 0) {
@@ -5385,7 +5387,7 @@ static int swrap_close(int fd)
 	}
 
 	si->next_free = first_free;
-	first_free = fi->si_index;
+	first_free = si_index;
 
 	return ret;
 }
