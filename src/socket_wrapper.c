@@ -5363,19 +5363,19 @@ static int swrap_close(int fd)
 	SWRAP_DLIST_REMOVE(socket_fds, fi);
 	free(fi);
 
+	ret = libc_close(fd);
+
 	si = &sockets[si_index];
 	si->refcount--;
 
 	if (si->refcount > 0) {
 		/* there are still references left */
-		return libc_close(fd);
+		return ret;
 	}
 
 	if (si->myname.sa_socklen > 0 && si->peername.sa_socklen > 0) {
 		swrap_pcap_dump_packet(si, NULL, SWRAP_CLOSE_SEND, NULL, 0);
 	}
-
-	ret = libc_close(fd);
 
 	if (si->myname.sa_socklen > 0 && si->peername.sa_socklen > 0) {
 		swrap_pcap_dump_packet(si, NULL, SWRAP_CLOSE_RECV, NULL, 0);
