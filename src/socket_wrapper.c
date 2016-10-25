@@ -1733,7 +1733,7 @@ static void swrap_remove_stale(int fd)
 	SWRAP_DLIST_REMOVE(socket_fds, fi);
 	free(fi);
 
-	si = &sockets[fi->si_index];
+	si = &sockets[si_index];
 	si->refcount--;
 
 	if (si->refcount > 0) {
