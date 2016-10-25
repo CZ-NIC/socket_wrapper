@@ -211,7 +211,7 @@ enum swrap_dbglvl_e {
 
 #define SWRAP_DLIST_ADD_AFTER(list, item, el) \
 do { \
-	if ((list) != NULL || (el) != NULL) { \
+	if ((list) == NULL || (el) == NULL) { \
 		SWRAP_DLIST_ADD(list, item); \
 	} else { \
 		(item)->prev = (el); \
