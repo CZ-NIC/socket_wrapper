@@ -1721,17 +1721,19 @@ static void swrap_remove_stale(int fd)
 {
 	struct socket_info_fd *fi = find_socket_info_fd(fd);
 	struct socket_info *si;
+	int si_index;
 
 	if (fi == NULL) {
 		return;
 	}
 
-	si = &sockets[fi->si_index];
+	si_index = fi->si_index;
 
 	SWRAP_LOG(SWRAP_LOG_TRACE, "remove stale wrapper for %d", fd);
 	SWRAP_DLIST_REMOVE(socket_fds, fi);
 	free(fi);
 
+	si = &sockets[fi->si_index];
 	si->refcount--;
 
 	if (si->refcount > 0) {
@@ -1743,7 +1745,7 @@ static void swrap_remove_stale(int fd)
 	}
 
 	si->next_free = first_free;
-	first_free = fi->si_index;
+	first_free = si_index;
 }
 
 static int sockaddr_convert_to_un(struct socket_info *si,
