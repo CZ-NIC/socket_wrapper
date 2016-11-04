@@ -259,6 +259,8 @@ do { \
  */
 #define SOCKET_WRAPPER_MAX_SOCKETS_DEFAULT 65535
 
+#define SOCKET_WRAPPER_MAX_SOCKETS_LIMIT 256000
+
 /* This limit is to avoid broadcast sendto() needing to stat too many
  * files.  It may be raised (with a performance cost) to up to 254
  * without changing the format above */
@@ -1139,6 +1141,11 @@ static size_t socket_wrapper_max_sockets(void)
 
 	tmp = strtoul(s, &endp, 10);
 	if (s == endp) {
+		goto done;
+	}
+	if (tmp == 0 || tmp > SOCKET_WRAPPER_MAX_SOCKETS_LIMIT) {
+		SWRAP_LOG(SWRAP_LOG_ERROR,
+			  "Invalid number of sockets specified, using default.");
 		goto done;
 	}
 
