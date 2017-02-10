@@ -35,7 +35,8 @@ set(SWRAP_TESTS
     test_echo_udp_send_recv
     test_echo_udp_sendmsg_recvmsg
     test_swrap_unit
-    test_max_sockets)
+    test_max_sockets
+    test_close_failure)
 
 if (HAVE_STRUCT_MSGHDR_MSG_CONTROL)
     set(SWRAP_TESTS ${SWRAP_TESTS} test_sendmsg_recvmsg_fd)

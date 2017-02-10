@@ -5656,8 +5656,6 @@ void swrap_destructor(void)
 {
 	struct socket_info_fd *s = socket_fds;
 
-	SWRAP_LOCK_ALL;
-
 	while (s != NULL) {
 		swrap_close(s->fd);
 		s = socket_fds;
@@ -5671,6 +5669,4 @@ void swrap_destructor(void)
 	if (swrap.libc.socket_handle) {
 		dlclose(swrap.libc.socket_handle);
 	}
-
-	SWRAP_UNLOCK_ALL;
 }
