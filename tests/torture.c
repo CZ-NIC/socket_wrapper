@@ -188,7 +188,7 @@ static void torture_setup_echo_srv_ip(void **state,
 		}
 
 		rc = stat(s->srv_pidfile, &sb);
-		usleep(200);
+		usleep(2000);
 	} while (rc != 0);
 	assert_int_equal(rc, 0);
 
