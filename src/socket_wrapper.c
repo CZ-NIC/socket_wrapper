@@ -438,6 +438,7 @@ typedef int (*__libc_getsockopt)(int sockfd,
 typedef int (*__libc_ioctl)(int d, unsigned long int request, ...);
 typedef int (*__libc_listen)(int sockfd, int backlog);
 typedef int (*__libc_open)(const char *pathname, int flags, mode_t mode);
+typedef int (*__libc_openat)(int dirfd, const char *path, int flags, ...);
 typedef int (*__libc_pipe)(int pipefd[2]);
 typedef int (*__libc_read)(int fd, void *buf, size_t count);
 typedef ssize_t (*__libc_readv)(int fd, const struct iovec *iov, int iovcnt);
@@ -501,6 +502,7 @@ struct swrap_libc_symbols {
 	SWRAP_SYMBOL_ENTRY(ioctl);
 	SWRAP_SYMBOL_ENTRY(listen);
 	SWRAP_SYMBOL_ENTRY(open);
+	SWRAP_SYMBOL_ENTRY(openat);
 	SWRAP_SYMBOL_ENTRY(pipe);
 	SWRAP_SYMBOL_ENTRY(read);
 	SWRAP_SYMBOL_ENTRY(readv);
@@ -875,6 +877,34 @@ static int libc_open(const char *pathname, int flags, ...)
 
 	return fd;
 }
+
+static int libc_vopenat(int dirfd, const char *path, int flags, va_list ap)
+{
+	long int mode = 0;
+	int fd;
+
+	swrap_bind_symbol_libc(openat);
+
+	mode = va_arg(ap, long int);
+
+	fd = swrap.libc.symbols._libc_openat.f(dirfd, path, flags, (mode_t)mode);
+
+	return fd;
+}
+
+#if 0
+static int libc_openat(int dirfd, const char *path, int flags, ...)
+{
+	va_list ap;
+	int fd;
+
+	va_start(ap, flags);
+	fd = libc_vopenat(dirfd, path, flags, ap);
+	va_end(ap);
+
+	return fd;
+}
+#endif
 
 static int libc_pipe(int pipefd[2])
 {
@@ -3543,6 +3573,40 @@ int open(const char *pathname, int flags, ...)
 
 	va_start(ap, flags);
 	fd = swrap_vopen(pathname, flags, ap);
+	va_end(ap);
+
+	return fd;
+}
+
+/****************************************************************************
+ *   OPENAT
+ ***************************************************************************/
+
+static int swrap_vopenat(int dirfd, const char *path, int flags, va_list ap)
+{
+	int ret;
+
+	ret = libc_vopenat(dirfd, path, flags, ap);
+	if (ret != -1) {
+		/*
+		 * There are methods for closing descriptors (libc-internal code
+		 * paths, direct syscalls) which close descriptors in ways that
+		 * we can't intercept, so try to recover when we notice that
+		 * that's happened
+		 */
+		swrap_remove_stale(ret);
+	}
+
+	return ret;
+}
+
+int openat(int dirfd, const char *path, int flags, ...)
+{
+	va_list ap;
+	int fd;
+
+	va_start(ap, flags);
+	fd = swrap_vopenat(dirfd, path, flags, ap);
 	va_end(ap);
 
 	return fd;
